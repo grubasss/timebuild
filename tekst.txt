@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>TimeBuild Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+body{font-family:Arial;padding:15px}
+input,select,button{padding:6px;margin:4px 0;width:100%}
+.card{border:1px solid #ccc;padding:10px;margin:10px 0}
+h2{margin-top:30px}
+</style>
+</head>
+<body>
+
+<h1>🏗 TimeBuild Pro</h1>
+
+<h2>🏢 Firma</h2>
+<input id="companyName" placeholder="Nazwa firmy">
+<button onclick="addCompany()">Dodaj firmę</button>
+<select id="companySelect"></select>
+
+<h2>👷 Pracownik</h2>
+<input id="empName" placeholder="Imię">
+<input id="empRate" type="number" placeholder="Stawka/h">
+<button onclick="addEmployee()">Dodaj pracownika</button>
+
+<h2>⏰ Godziny</h2>
+<select id="empSelect"></select>
+<input id="workHours" type="number" placeholder="Liczba godzin">
+<button onclick="addHours()">Zapisz</button>
+
+<h2>💰 Zaliczka</h2>
+<select id="advSelect"></select>
+<input id="advAmount" type="number" placeholder="Kwota">
+<button onclick="addAdvance()">Dodaj</button>
+
+<h2>📊 Podsumowanie</h2>
+<div id="summary"></div>
+
+<script>
+let companies=[]
+let employees=[]
+let hours=[]
+let advances=[]
+
+function addCompany(){
+  companies.push({id:Date.now(),name:companyName.value})
+  companyName.value=''
+  render()
+}
+
+function addEmployee(){
+  employees.push({
+    id:Date.now(),
+    name:empName.value,
+    rate:Number(empRate.value),
+    companyId:Number(companySelect.value)
+  })
+  empName.value=''
+  empRate.value=''
+  render()
+}
+
+function addHours(){
+  hours.push({
+    employeeId:Number(empSelect.value),
+    h:Number(workHours.value)
+  })
+  workHours.value=''
+  render()
+}
+
+function addAdvance(){
+  advances.push({
+    employeeId:Number(advSelect.value),
+    a:Number(advAmount.value)
+  })
+  advAmount.value=''
+  render()
+}
+
+function render(){
+  companySelect.innerHTML=companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')
+  empSelect.innerHTML=advSelect.innerHTML=
+    employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')
+
+  summary.innerHTML=''
+  employees.forEach(e=>{
+    let h=hours.filter(x=>x.employeeId===e.id).reduce((s,x)=>s+x.h,0)
+    let a=advances.filter(x=>x.employeeId===e.id).reduce((s,x)=>s+x.a,0)
+    let pay=h*e.rate-a
+    summary.innerHTML+=`
+      <div class="card">
+      <b>${e.name}</b><br>
+      Godziny: ${h}<br>
+      Zaliczki: ${a} zł<br>
+      Do wypłaty: <b>${pay} zł</b>
+      </div>`
+  })
+}
+</script>
+
+</body>
+</html>
