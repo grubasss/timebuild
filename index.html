@@ -2,110 +2,27 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>House Concept — TimeBuild Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TimeBuild Pro</title>
 
 <style>
-:root{
---green:#6FAF8E;
---dark:#2F3A3F;
---bg:#F4F7F6;
---card:#FFFFFF;
---soft:#E5E7EB;
-}
+body{margin:0;font-family:system-ui;background:#f4f7f6}
+header{background:#2f4f4f;color:white;padding:14px;display:flex;gap:10px;align-items:center}
+header img{height:40px}
+.container{max-width:1050px;margin:auto;padding:14px}
 
-body{
-margin:0;
-font-family:system-ui,-apple-system;
-background:var(--bg);
-}
+.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin-bottom:14px}
+.day{background:white;border-radius:8px;padding:6px;text-align:center;font-size:12px;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.05)}
+.day.active{outline:2px solid #6faf8e}
 
-header{
-background:linear-gradient(90deg,var(--green),var(--dark));
-color:white;
-padding:14px 18px;
-display:flex;
-align-items:center;
-gap:12px;
-}
+.card{background:white;padding:14px;border-radius:14px;margin-bottom:14px;box-shadow:0 6px 16px rgba(0,0,0,.06)}
 
-header img{
-height:42px;
-}
+.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:6px 0}
+input,select,button{padding:8px;border-radius:8px;border:1px solid #ddd;width:100%;margin:4px 0}
+button{background:#6faf8e;color:white;border:none;font-weight:600}
 
-.container{
-max-width:1000px;
-margin:auto;
-padding:16px;
-}
-
-.stats{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-gap:14px;
-margin-bottom:18px;
-}
-
-.stat-card{
-background:var(--card);
-padding:14px;
-border-radius:16px;
-box-shadow:0 6px 18px rgba(0,0,0,.05);
-}
-
-.stat-card h4{
-margin:0;
-font-size:14px;
-color:#555;
-}
-
-.stat-card b{
-font-size:20px;
-}
-
-.card{
-background:var(--card);
-padding:16px;
-border-radius:16px;
-margin-bottom:16px;
-box-shadow:0 8px 20px rgba(0,0,0,.06);
-}
-
-h3{margin-top:0}
-
-input,select,button{
-width:100%;
-padding:12px;
-margin:6px 0;
-border-radius:12px;
-border:1px solid var(--soft);
-font-size:15px;
-}
-
-button{
-background:var(--green);
-color:white;
-border:none;
-font-weight:600;
-}
-
-.project{
-display:flex;
-justify-content:space-between;
-padding:8px 0;
-border-bottom:1px solid var(--soft);
-}
-
-.worker{
-border-bottom:1px solid var(--soft);
-padding:8px 0;
-}
-
-.total{
-font-weight:700;
-margin-top:8px;
-font-size:18px;
-}
+.small{width:70px}
+.flex{display:flex;gap:6px}
 </style>
 </head>
 
@@ -118,117 +35,152 @@ font-size:18px;
 
 <div class="container">
 
-<div class="stats">
-<div class="stat-card">
-<h4>Godziny</h4>
-<b id="totalHours">0h</b>
+<div class="calendar" id="calendar"></div>
+
+<div class="card">
+<h3>Dzień roboczy</h3>
+<select id="worker"></select>
+<select id="project"></select>
+<input type="number" id="hours" placeholder="Godziny">
+<div class="flex">
+<button onclick="addEntry()">➕ Dodaj</button>
+<button onclick="removeLast()">➖ Cofnij</button>
 </div>
-<div class="stat-card">
-<h4>Koszt robocizny</h4>
-<b id="totalCost">0 zł</b>
-</div>
-<div class="stat-card">
-<h4>Projekty</h4>
-<b id="projectCount">0</b>
-</div>
+<div id="dayList"></div>
 </div>
 
 <div class="card">
-<h3>📁 Projekty</h3>
+<h3>Pracownicy – godziny i stawki</h3>
+<div id="workers"></div>
+</div>
+
+<div class="card">
+<h3>Projekty</h3>
 <input id="newProject" placeholder="Nazwa projektu">
 <button onclick="addProject()">Dodaj projekt</button>
-<div id="projectList"></div>
+<div id="projects"></div>
 </div>
 
 <div class="card">
-<h3>📅 Godziny</h3>
-<input type="number" id="hours" placeholder="Godziny dla wszystkich">
-<select id="projectSelect"></select>
-<button onclick="addHours()">Dodaj godziny</button>
+<h3>Zaliczki</h3>
+<select id="advWorker"></select>
+<input type="number" id="advAmount" placeholder="Kwota">
+<button onclick="addAdvance()">Dodaj zaliczkę</button>
 </div>
 
 <div class="card">
-<h3>💰 Zaliczki (wszyscy)</h3>
-<input type="number" id="advanceAll" placeholder="Kwota">
-<button onclick="addAdvanceAll()">Dodaj wszystkim</button>
-</div>
-
-<div class="card">
-<h3>📊 Podsumowanie</h3>
+<h3>Podsumowanie</h3>
 <div id="summary"></div>
 </div>
 
 </div>
 
 <script>
-let projects = JSON.parse(localStorage.getItem("projects")) || ["Dom Wola"];
-let workers = JSON.parse(localStorage.getItem("workers")) || [
-{name:"Łukasz Nowak",rate:25,hours:0,adv:0},
-{name:"Ariel Walczak",rate:25,hours:0,adv:0},
-{name:"Daniel Daniel",rate:25,hours:0,adv:0}
-];
+let db=JSON.parse(localStorage.getItem("tbpro"))||{
+workers:[
+{name:"Łukasz Nowak",rate:25,adv:0},
+{name:"Ariel Walczak",rate:25,adv:0},
+{name:"Daniel Daniel",rate:25,adv:0}
+],
+projects:["Dom Wola"],
+entries:{}
+};
 
-function save(){
-localStorage.setItem("projects",JSON.stringify(projects));
-localStorage.setItem("workers",JSON.stringify(workers));
+let current=new Date();
+let selected=null;
+
+const save=()=>localStorage.setItem("tbpro",JSON.stringify(db));
+const key=d=>d.toISOString().slice(0,10);
+
+function renderCalendar(){
+calendar.innerHTML="";
+let days=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
+for(let i=1;i<=days;i++){
+let d=new Date(current.getFullYear(),current.getMonth(),i);
+let k=key(d);
+let sum=(db.entries[k]||[]).reduce((a,b)=>a+b.h,0);
+let el=document.createElement("div");
+el.className="day"+(selected===k?" active":"");
+el.innerHTML=`${i}<br>${sum}h`;
+el.onclick=()=>{selected=k;renderAll()};
+calendar.appendChild(el);
+}
+}
+
+function addEntry(){
+if(!selected||!hours.value) return;
+db.entries[selected]=db.entries[selected]||[];
+db.entries[selected].push({w:+worker.value,p:project.value,h:+hours.value});
+hours.value="";
+save();renderAll();
+}
+
+function removeLast(){
+if(!db.entries[selected]?.length) return;
+db.entries[selected].pop();
+save();renderAll();
 }
 
 function addProject(){
 if(!newProject.value) return;
-projects.push(newProject.value);
+db.projects.push(newProject.value);
 newProject.value="";
-save();
-render();
+save();renderAll();
 }
 
-function addHours(){
-let h=Number(hours.value);
-if(!h) return;
-workers.forEach(w=>w.hours+=h);
-save();
-render();
+function addAdvance(){
+db.workers[advWorker.value].adv+=+advAmount.value;
+advAmount.value="";
+save();renderAll();
 }
 
-function addAdvanceAll(){
-let a=Number(advanceAll.value);
-if(!a) return;
-workers.forEach(w=>w.adv+=a);
-advanceAll.value="";
-save();
-render();
-}
+function renderAll(){
+renderCalendar();
 
-function render(){
-projectSelect.innerHTML="";
-projectList.innerHTML="";
+workers.innerHTML="";
+projects.innerHTML="";
 summary.innerHTML="";
-let totalH=0;
-let totalC=0;
+worker.innerHTML="";
+project.innerHTML="";
+advWorker.innerHTML="";
 
-projects.forEach(p=>{
-projectSelect.innerHTML+=`<option>${p}</option>`;
-projectList.innerHTML+=`<div class="project">${p}</div>`;
+db.workers.forEach((w,i)=>{
+let hoursSum=0;
+Object.values(db.entries).forEach(day=>{
+day.forEach(e=>{if(e.w===i)hoursSum+=e.h});
 });
 
-workers.forEach(w=>{
-let pay=w.hours*w.rate-w.adv;
-totalH+=w.hours;
-totalC+=pay;
-summary.innerHTML+=`
-<div class="worker">
-<b>${w.name}</b><br>
-Godziny: ${w.hours}h<br>
-Zaliczki: ${w.adv} zł<br>
-Do wypłaty: <b>${pay} zł</b>
+workers.innerHTML+=`
+<div class="row">
+<input value="${w.name}" onchange="db.workers[${i}].name=this.value;save()">
+<div class="flex">
+<button onclick="db.workers[${i}].rate++;save();renderAll()">➕</button>
+<button onclick="db.workers[${i}].rate--;save();renderAll()">➖</button>
+<input class="small" type="number" value="${w.rate}" onchange="db.workers[${i}].rate=this.value;save();renderAll()">
+</div>
+<div class="flex">
+<button onclick="db.entries[Object.keys(db.entries)[0]]&&0"> </button>
+</div>
+<span>${hoursSum}h</span>
 </div>`;
+
+worker.innerHTML+=`<option value="${i}">${w.name}</option>`;
+advWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
+
+let pay=hoursSum*w.rate-w.adv;
+summary.innerHTML+=`<div class="row">${w.name}: ${hoursSum}h → ${pay} zł</div>`;
 });
 
-totalHours.textContent=totalH+"h";
-totalCost.textContent=totalC+" zł";
-projectCount.textContent=projects.length;
+db.projects.forEach((p,i)=>{
+projects.innerHTML+=`
+<div class="row">${p}
+<button onclick="db.projects.splice(${i},1);save();renderAll()">❌</button>
+</div>`;
+project.innerHTML+=`<option>${p}</option>`;
+});
 }
 
-render();
+renderAll();
 </script>
 
 </body>
