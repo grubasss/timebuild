@@ -3,89 +3,41 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>House Concept – TimeBuild Pro</title>
+<title>TimeBuild Pro</title>
+
+<link rel="manifest" href="manifest.json">
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 
 <style>
-body{margin:0;font-family:system-ui;background:#f4f6f5}
-header{
-background:#2f4f4f;
-color:white;
-padding:12px;
-display:flex;
-align-items:center;
-gap:12px;
-justify-content:center;
-}
-header img{height:46px}
-.container{max-width:1100px;margin:auto;padding:14px}
-.grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}
-.card{background:white;padding:14px;border-radius:14px;box-shadow:0 6px 16px rgba(0,0,0,.06)}
-.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.day{background:#e9f0ee;border-radius:10px;padding:8px;cursor:pointer;text-align:center}
-.day.active{background:#6faf8e;color:white}
-input,select,button{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;margin-top:6px}
-button{background:#6faf8e;color:white;border:none;font-weight:600}
-.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
-.row button{background:#c0392b;font-size:12px;padding:4px 8px}
-.total{font-size:18px;font-weight:700;margin-top:10px}
-.small{width:70px}
-@media(max-width:850px){.grid{grid-template-columns:1fr}}
+body{font-family:system-ui;background:#f4f6f5;margin:0}
+header{background:#2f4f4f;color:white;padding:12px;text-align:center}
+.container{max-width:1200px;margin:auto;padding:12px}
+.card{background:white;padding:12px;border-radius:12px;margin-bottom:12px}
+button{padding:8px;border-radius:8px;border:none;background:#6faf8e;color:white}
+input,select{padding:8px;border-radius:8px;width:100%;margin:4px 0}
+canvas{max-width:100%}
 </style>
 </head>
 
 <body>
-
-<header>
-<img src="data:image/png;base64,WKLEJ_TUTAJ_BASE64_LOGO">
-<b>TimeBuild Pro</b>
-</header>
+<header>House Concept – TimeBuild Pro</header>
 
 <div class="container">
 
-<div class="grid">
-
 <div class="card">
-<h3>Kalendarz</h3>
-<div class="calendar" id="calendar"></div>
+<button onclick="exportBackup()">📦 Backup danych</button>
+<input type="file" onchange="importBackup(this)">
+<button onclick="exportExcel()">📤 Excel</button>
 </div>
 
 <div class="card">
-<h3>Dodaj godziny</h3>
-<select id="worker"></select>
-<select id="project"></select>
-<input type="number" id="hours" placeholder="Godziny">
-<button onclick="addEntry()">Dodaj wpis</button>
-<button onclick="deleteDay()" style="background:#c0392b">Usuń dzień</button>
-<h4>Dzień:</h4>
-<div id="dayList"></div>
-</div>
-
+<canvas id="projectChart"></canvas>
 </div>
 
 <div class="card">
-<h3>Pracownicy</h3>
-<input id="newWorker" placeholder="Imię i nazwisko">
-<input id="newRate" type="number" placeholder="Stawka zł/h">
-<button onclick="addWorker()">Dodaj</button>
-<div id="workerManage"></div>
-</div>
-
-<div class="card">
-<h3>Projekty</h3>
-<input id="newProject" placeholder="Nazwa projektu">
-<button onclick="addProject()">Dodaj</button>
-<div id="projectManage"></div>
-</div>
-
-<div class="card">
-<h3>Rozliczenie</h3>
-<div id="workerSummary"></div>
-<div class="total" id="totalCost"></div>
-</div>
-
-<div class="card">
-<h3>Koszt projektów</h3>
-<div id="projectSummary"></div>
+<canvas id="workerChart"></canvas>
 </div>
 
 </div>
@@ -97,118 +49,68 @@ projects:[],
 entries:{}
 };
 
-let current=new Date();
-let selectedDate=null;
-const daysPL=["Nd","Pn","Wt","Śr","Cz","Pt","Sb"];
+function save(){localStorage.setItem("timebuild",JSON.stringify(data))}
 
-function save(){localStorage.setItem("timebuild",JSON.stringify(data));}
-function key(d){return d.toISOString().slice(0,10);}
-
-function renderCalendar(){
-calendar.innerHTML="";
-let last=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
-for(let i=1;i<=last;i++){
-let d=new Date(current.getFullYear(),current.getMonth(),i);
-let k=key(d);
-let sum=(data.entries[k]||[]).reduce((a,b)=>a+b.h,0);
-let el=document.createElement("div");
-el.className="day"+(selectedDate===k?" active":"");
-el.innerHTML=`<b>${i}</b><br>${daysPL[d.getDay()]}<br>${sum}h`;
-el.onclick=()=>selectDay(k);
-calendar.appendChild(el);
-}
+// ===== BACKUP =====
+function exportBackup(){
+const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="backup.json";
+a.click();
 }
 
-function selectDay(k){selectedDate=k;renderCalendar();renderDay();}
-
-function renderDay(){
-dayList.innerHTML="";
-(data.entries[selectedDate]||[]).forEach((e,i)=>{
-let w=data.workers[e.w].name;
-dayList.innerHTML+=`<div class="row">${w} – ${e.h}h (${e.p}) <button onclick="removeEntry(${i})">❌</button></div>`;
-});
+function importBackup(input){
+const r=new FileReader();
+r.onload=()=>{data=JSON.parse(r.result);save();location.reload()};
+r.readAsText(input.files[0]);
 }
 
-function addEntry(){
-if(!selectedDate||!hours.value) return;
-data.entries[selectedDate]=data.entries[selectedDate]||[];
-data.entries[selectedDate].push({w:+worker.value,p:project.value,h:+hours.value});
-hours.value="";
-save();renderCalendar();renderDay();renderReports();
-}
+// ===== EXCEL =====
+function exportExcel(){
+let wb=XLSX.utils.book_new();
 
-function removeEntry(i){
-data.entries[selectedDate].splice(i,1);
-save();renderCalendar();renderDay();renderReports();
-}
-
-function deleteDay(){
-delete data.entries[selectedDate];
-save();renderCalendar();renderDay();renderReports();
-}
-
-function addWorker(){
-if(!newWorker.value||!newRate.value) return;
-data.workers.push({name:newWorker.value,rate:+newRate.value});
-newWorker.value="";newRate.value="";
-save();renderAll();
-}
-
-function removeWorker(i){data.workers.splice(i,1);save();renderAll();}
-
-function addProject(){
-if(!newProject.value) return;
-data.projects.push(newProject.value);
-newProject.value="";
-save();renderAll();
-}
-
-function removeProject(i){data.projects.splice(i,1);save();renderAll();}
-
-function renderAll(){renderCalendar();renderManage();renderSelectors();renderReports();}
-
-function renderManage(){
-workerManage.innerHTML="";
-projectManage.innerHTML="";
-data.workers.forEach((w,i)=>{
-workerManage.innerHTML+=`<div class="row">${w.name}
-<input class="small" type="number" value="${w.rate}" onchange="data.workers[${i}].rate=this.value;save();renderReports()">
-<button onclick="removeWorker(${i})">Usuń</button></div>`;
-});
-data.projects.forEach((p,i)=>{
-projectManage.innerHTML+=`<div class="row">${p}<button onclick="removeProject(${i})">Usuń</button></div>`;
-});
-}
-
-function renderSelectors(){
-worker.innerHTML="";
-project.innerHTML="";
-data.workers.forEach((w,i)=>worker.innerHTML+=`<option value="${i}">${w.name}</option>`);
-data.projects.forEach(p=>project.innerHTML+=`<option>${p}</option>`);
-}
-
-function renderReports(){
-workerSummary.innerHTML="";
-projectSummary.innerHTML="";
-let workerTotals={},projectTotals={},total=0;
-Object.values(data.entries).forEach(day=>{
-day.forEach(e=>{
+let proj={};
+Object.values(data.entries).flat().forEach(e=>{
 let cost=e.h*data.workers[e.w].rate;
-workerTotals[data.workers[e.w].name]=(workerTotals[data.workers[e.w].name]||0)+cost;
-projectTotals[e.p]=(projectTotals[e.p]||0)+cost;
-total+=cost;
+proj[e.p]=(proj[e.p]||0)+cost;
 });
+
+let ws=XLSX.utils.json_to_sheet(
+Object.entries(proj).map(([p,v])=>({Projekt:p,Kwota:v}))
+);
+
+XLSX.utils.book_append_sheet(wb,ws,"Projekty");
+XLSX.writeFile(wb,"raport.xlsx");
+}
+
+// ===== CHARTS =====
+function drawCharts(){
+let proj={},workers={};
+
+Object.values(data.entries).flat().forEach(e=>{
+let cost=e.h*data.workers[e.w].rate;
+proj[e.p]=(proj[e.p]||0)+cost;
+workers[data.workers[e.w].name]=(workers[data.workers[e.w].name]||0)+cost;
 });
-Object.entries(workerTotals).forEach(([n,v])=>{
-workerSummary.innerHTML+=`<div class="row">${n}<b>${v} zł</b></div>`;
+
+new Chart(projectChart,{
+type:"bar",
+data:{labels:Object.keys(proj),datasets:[{data:Object.values(proj)}]}
 });
-totalCost.textContent="RAZEM: "+total+" zł";
-Object.entries(projectTotals).forEach(([p,v])=>{
-projectSummary.innerHTML+=`<div class="row">${p}<b>${v} zł</b></div>`;
+
+new Chart(workerChart,{
+type:"pie",
+data:{labels:Object.keys(workers),datasets:[{data:Object.values(workers)}]}
 });
 }
 
-renderAll();
+drawCharts();
+
+// ===== PWA =====
+if("serviceWorker" in navigator){
+navigator.serviceWorker.register("sw.js");
+}
 </script>
 </body>
 </html>
