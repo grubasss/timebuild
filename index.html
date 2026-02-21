@@ -21,8 +21,9 @@ header img{height:40px}
 input,select,button{padding:8px;border-radius:8px;border:1px solid #ddd;width:100%;margin:4px 0}
 button{background:#6faf8e;color:white;border:none;font-weight:600}
 
+.flex{display:flex;gap:6px;flex-wrap:wrap}
 .small{width:70px}
-.flex{display:flex;gap:6px}
+.checks label{display:block;font-size:14px}
 </style>
 </head>
 
@@ -39,18 +40,23 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 
 <div class="card">
 <h3>Dzień roboczy</h3>
-<select id="worker"></select>
+
 <select id="project"></select>
 <input type="number" id="hours" placeholder="Godziny">
+
+<div class="checks" id="workerChecks"></div>
+
 <div class="flex">
-<button onclick="addEntry()">➕ Dodaj</button>
+<button onclick="addSelected()">➕ Wybranym</button>
+<button onclick="addAll()">➕ Wszystkim</button>
 <button onclick="removeLast()">➖ Cofnij</button>
 </div>
+
 <div id="dayList"></div>
 </div>
 
 <div class="card">
-<h3>Pracownicy – stawka i godziny</h3>
+<h3>Pracownicy – stawki</h3>
 <div id="workers"></div>
 </div>
 
@@ -78,9 +84,9 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 <script>
 let db=JSON.parse(localStorage.getItem("tbpro"))||{
 workers:[
-{name:"Łukasz Nowak",rate:25,adv:0,extra:0},
-{name:"Ariel Walczak",rate:25,adv:0,extra:0},
-{name:"Daniel Daniel",rate:25,adv:0,extra:0}
+{name:"Łukasz Nowak",rate:25,adv:0},
+{name:"Ariel Walczak",rate:25,adv:0},
+{name:"Daniel Daniel",rate:25,adv:0}
 ],
 projects:["Dom Wola"],
 entries:{}
@@ -95,10 +101,12 @@ const key=d=>d.toISOString().slice(0,10);
 function renderCalendar(){
 calendar.innerHTML="";
 let days=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
+
 for(let i=1;i<=days;i++){
 let d=new Date(current.getFullYear(),current.getMonth(),i);
 let k=key(d);
 let sum=(db.entries[k]||[]).reduce((a,b)=>a+b.h,0);
+
 let el=document.createElement("div");
 el.className="day"+(selected===k?" active":"");
 el.innerHTML=`${i}<br>${sum}h`;
@@ -107,10 +115,34 @@ calendar.appendChild(el);
 }
 }
 
-function addEntry(){
+function addSelected(){
 if(!selected||!hours.value) return;
 db.entries[selected]=db.entries[selected]||[];
-db.entries[selected].push({w:+worker.value,p:project.value,h:+hours.value});
+
+document.querySelectorAll("#workerChecks input:checked").forEach(cb=>{
+db.entries[selected].push({
+w:+cb.value,
+p:project.value,
+h:+hours.value
+});
+});
+
+hours.value="";
+save();renderAll();
+}
+
+function addAll(){
+if(!selected||!hours.value) return;
+db.entries[selected]=db.entries[selected]||[];
+
+db.workers.forEach((w,i)=>{
+db.entries[selected].push({
+w:i,
+p:project.value,
+h:+hours.value
+});
+});
+
 hours.value="";
 save();renderAll();
 }
@@ -134,48 +166,16 @@ advAmount.value="";
 save();renderAll();
 }
 
-function adjustHours(i,delta){
-db.workers[i].extra+=delta;
-save();renderAll();
-}
-
 function renderAll(){
 renderCalendar();
 
-workers.innerHTML="";
 projects.innerHTML="";
+workers.innerHTML="";
 summary.innerHTML="";
-worker.innerHTML="";
 project.innerHTML="";
 advWorker.innerHTML="";
-
-db.workers.forEach((w,i)=>{
-let hoursSum=w.extra;
-Object.values(db.entries).forEach(day=>{
-day.forEach(e=>{if(e.w===i)hoursSum+=e.h});
-});
-
-workers.innerHTML+=`
-<div class="row">
-<input value="${w.name}" onchange="db.workers[${i}].name=this.value;save()">
-<div class="flex">
-<button onclick="db.workers[${i}].rate++;save();renderAll()">➕</button>
-<button onclick="db.workers[${i}].rate--;save();renderAll()">➖</button>
-<input class="small" type="number" value="${w.rate}" onchange="db.workers[${i}].rate=this.value;save();renderAll()">
-</div>
-<div class="flex">
-<button onclick="adjustHours(${i},1)">➕h</button>
-<button onclick="adjustHours(${i},-1)">➖h</button>
-</div>
-<span>${hoursSum}h</span>
-</div>`;
-
-worker.innerHTML+=`<option value="${i}">${w.name}</option>`;
-advWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
-
-let pay=hoursSum*w.rate-w.adv;
-summary.innerHTML+=`<div class="row">${w.name}: ${hoursSum}h → ${pay} zł</div>`;
-});
+workerChecks.innerHTML="";
+dayList.innerHTML="";
 
 db.projects.forEach((p,i)=>{
 projects.innerHTML+=`
@@ -183,6 +183,38 @@ projects.innerHTML+=`
 <button onclick="db.projects.splice(${i},1);save();renderAll()">❌</button>
 </div>`;
 project.innerHTML+=`<option>${p}</option>`;
+});
+
+db.workers.forEach((w,i)=>{
+workerChecks.innerHTML+=`
+<label>
+<input type="checkbox" value="${i}"> ${w.name}
+</label>`;
+
+workers.innerHTML+=`
+<div class="row">
+<input value="${w.name}" onchange="w.name=this.value;save()">
+<div class="flex">
+<button onclick="w.rate++;save();renderAll()">➕</button>
+<button onclick="w.rate--;save();renderAll()">➖</button>
+<input class="small" type="number" value="${w.rate}" onchange="w.rate=Math.max(0,this.value);save();renderAll()">
+</div>
+</div>`;
+
+advWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
+});
+
+(db.entries[selected]||[]).forEach(e=>{
+dayList.innerHTML+=`<div class="row">${db.workers[e.w].name} – ${e.h}h (${e.p})</div>`;
+});
+
+db.workers.forEach((w,i)=>{
+let h=0;
+Object.values(db.entries).forEach(day=>{
+day.forEach(e=>{if(e.w===i)h+=e.h});
+});
+let pay=h*w.rate-w.adv;
+summary.innerHTML+=`<div class="row">${w.name}: ${h}h → ${pay} zł</div>`;
 });
 }
 
