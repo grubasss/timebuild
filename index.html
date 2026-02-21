@@ -14,7 +14,8 @@ header{background:#3f4f4f;color:white;padding:14px;font-size:18px}
 .card{background:white;padding:14px;border-radius:12px;box-shadow:0 4px 14px rgba(0,0,0,.05)}
 input,select,button{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid #ddd}
 button{background:#6faf8e;color:white;border:none;font-weight:600}
-.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
+.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+.row button{background:#dc2626;padding:4px 8px;font-size:12px}
 .total{font-weight:700;font-size:18px;margin-top:10px}
 .toggle{display:flex;gap:8px;margin-bottom:10px}
 .toggle button{flex:1}
@@ -41,14 +42,14 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 <h3>Pracownicy</h3>
 <input id="name" placeholder="Imię i nazwisko">
 <input id="rate" type="number" placeholder="Stawka zł/h">
-<button onclick="addWorker()">Dodaj</button>
+<button onclick="addWorker()">Dodaj pracownika</button>
 <div id="workers"></div>
 </div>
 
 <div class="card">
 <h3>Projekty</h3>
 <input id="projectName" placeholder="Nazwa projektu">
-<button onclick="addProject()">Dodaj</button>
+<button onclick="addProject()">Dodaj projekt</button>
 <div id="projects"></div>
 </div>
 
@@ -56,15 +57,15 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 <h3>Godziny</h3>
 <select id="workerSel"></select>
 <select id="projectSel"></select>
-<input type="number" id="hours">
+<input type="number" id="hours" placeholder="Godziny">
 <button onclick="addHours()">Dodaj</button>
 </div>
 
 <div class="card">
 <h3>Zaliczki</h3>
 <select id="advanceSel"></select>
-<input type="number" id="advanceAmount">
-<button onclick="addAdvance()">Dodaj</button>
+<input type="number" id="advanceAmount" placeholder="Kwota">
+<button onclick="addAdvance()">Dodaj zaliczkę</button>
 </div>
 
 <div class="card">
@@ -80,7 +81,7 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 <div class="card">
 <h3>Podsumowanie</h3>
 <div id="summary"></div>
-<div class="total" id="total"></div>
+<div class="total" id="totalEl"></div>
 <button onclick="exportExcel()">📤 Eksport CSV</button>
 </div>
 
@@ -88,145 +89,168 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <script>
-let data=JSON.parse(localStorage.getItem("hcData"))||{
-workers:[],projects:[],entries:{},advances:{}
+let data = JSON.parse(localStorage.getItem("hcData")) || {
+  workers: [],
+  projects: [],
+  entries: {},
+  advances: {}
 };
 
-let mode="month";
-let currentKey="";
+let mode = "month";
+let currentKey = "";
 
-function save(){localStorage.setItem("hcData",JSON.stringify(data));}
+function save(){
+  localStorage.setItem("hcData", JSON.stringify(data));
+}
 
-function setMode(m){mode=m;buildDates();}
+function setMode(m){
+  mode = m;
+  buildDates();
+}
 
 function buildDates(){
-dateSelect.innerHTML="";
-for(let i=0;i<12;i++){
-let d=new Date();
-if(mode==="month"){
-d.setMonth(d.getMonth()-i);
-let key=d.toISOString().slice(0,7);
-dateSelect.innerHTML+=`<option>${key}</option>`;
-}else{
-d.setDate(d.getDate()-i*7);
-let year=d.getFullYear();
-let week=Math.ceil((((d - new Date(year,0,1)) / 86400000) + new Date(year,0,1).getDay()+1)/7);
-let key=year+"-W"+week;
-dateSelect.innerHTML+=`<option>${key}</option>`;
-}
-}
-currentKey=dateSelect.value;
-render();
+  dateSelect.innerHTML="";
+  for(let i=0;i<12;i++){
+    let d=new Date();
+    if(mode==="month"){
+      d.setMonth(d.getMonth()-i);
+      let key=d.toISOString().slice(0,7);
+      dateSelect.innerHTML+=`<option>${key}</option>`;
+    } else {
+      d.setDate(d.getDate()-i*7);
+      let y=d.getFullYear();
+      let w=Math.ceil((((d-new Date(y,0,1))/86400000)+new Date(y,0,1).getDay()+1)/7);
+      dateSelect.innerHTML+=`<option>${y}-W${w}</option>`;
+    }
+  }
+  currentKey=dateSelect.value;
+  render();
 }
 
-dateSelect.onchange=e=>{currentKey=e.target.value;render()}
+dateSelect.onchange=e=>{currentKey=e.target.value;render()};
 
 function addWorker(){
-data.workers.push({name:name.value,rate:+rate.value});
-name.value="";rate.value="";
-save();render();
+  if(!name.value || !rate.value) return;
+  data.workers.push({name:name.value, rate:+rate.value});
+  name.value=""; rate.value="";
+  save(); render();
+}
+
+function removeWorker(i){
+  data.workers.splice(i,1);
+  save(); render();
 }
 
 function addProject(){
-data.projects.push(projectName.value);
-projectName.value="";
-save();render();
+  if(!projectName.value) return;
+  data.projects.push(projectName.value);
+  projectName.value="";
+  save(); render();
+}
+
+function removeProject(i){
+  data.projects.splice(i,1);
+  save(); render();
 }
 
 function addHours(){
-data.entries[currentKey]=data.entries[currentKey]||[];
-data.entries[currentKey].push({
-w:+workerSel.value,
-p:projectSel.value,
-h:+hours.value
-});
-hours.value="";
-save();render();
+  data.entries[currentKey]=data.entries[currentKey]||[];
+  data.entries[currentKey].push({
+    w:+workerSel.value,
+    p:projectSel.value,
+    h:+hours.value
+  });
+  hours.value="";
+  save(); render();
 }
 
 function addAdvance(){
-data.advances[currentKey]=data.advances[currentKey]||{};
-data.advances[currentKey][advanceSel.value]=(data.advances[currentKey][advanceSel.value]||0)+(+advanceAmount.value);
-advanceAmount.value="";
-save();render();
+  data.advances[currentKey]=data.advances[currentKey]||{};
+  let i=advanceSel.value;
+  data.advances[currentKey][i]=(data.advances[currentKey][i]||0)+(+advanceAmount.value);
+  advanceAmount.value="";
+  save(); render();
 }
 
 function render(){
-workers.innerHTML="";
-projects.innerHTML="";
-workerSel.innerHTML="";
-projectSel.innerHTML="";
-advanceSel.innerHTML="";
-projectReport.innerHTML="";
-summary.innerHTML="";
+  workers.innerHTML="";
+  projects.innerHTML="";
+  workerSel.innerHTML="";
+  projectSel.innerHTML="";
+  advanceSel.innerHTML="";
+  projectReport.innerHTML="";
+  summary.innerHTML="";
 
-data.workers.forEach((w,i)=>{
-workers.innerHTML+=`<div class="row">${w.name} (${w.rate} zł/h)</div>`;
-workerSel.innerHTML+=`<option value="${i}">${w.name}</option>`;
-advanceSel.innerHTML+=`<option value="${i}">${w.name}</option>`;
-});
+  data.workers.forEach((w,i)=>{
+    workers.innerHTML+=`
+      <div class="row">${w.name} (${w.rate} zł/h)
+      <button onclick="removeWorker(${i})">Usuń</button></div>`;
+    workerSel.innerHTML+=`<option value="${i}">${w.name}</option>`;
+    advanceSel.innerHTML+=`<option value="${i}">${w.name}</option>`;
+  });
 
-data.projects.forEach(p=>{
-projects.innerHTML+=`<div class="row">${p}</div>`;
-projectSel.innerHTML+=`<option>${p}</option>`;
-});
+  data.projects.forEach((p,i)=>{
+    projects.innerHTML+=`
+      <div class="row">${p}
+      <button onclick="removeProject(${i})">Usuń</button></div>`;
+    projectSel.innerHTML+=`<option>${p}</option>`;
+  });
 
-let total=0;
-let projTotals={};
+  let total=0;
+  let projTotals={};
 
-(data.entries[currentKey]||[]).forEach(e=>{
-let w=data.workers[e.w];
-let cost=e.h*w.rate;
-total+=cost;
-projTotals[e.p]=(projTotals[e.p]||0)+cost;
-});
+  (data.entries[currentKey]||[]).forEach(e=>{
+    let w=data.workers[e.w];
+    if(!w) return;
+    let cost=e.h*w.rate;
+    total+=cost;
+    projTotals[e.p]=(projTotals[e.p]||0)+cost;
+  });
 
-Object.entries(projTotals).forEach(([p,v])=>{
-projectReport.innerHTML+=`<div class="row">${p}<b>${v} zł</b></div>`;
-});
+  Object.entries(projTotals).forEach(([p,v])=>{
+    projectReport.innerHTML+=`<div class="row">${p}<b>${v} zł</b></div>`;
+  });
 
-data.workers.forEach((w,i)=>{
-let h=(data.entries[currentKey]||[]).filter(e=>e.w==i).reduce((a,b)=>a+b.h,0);
-let gross=h*w.rate;
-let adv=(data.advances[currentKey]||{})[i]||0;
-let net=gross-adv;
-summary.innerHTML+=`<div class="row">${w.name}<span>${net} zł</span></div>`;
-});
+  data.workers.forEach((w,i)=>{
+    let h=(data.entries[currentKey]||[]).filter(e=>e.w==i).reduce((a,b)=>a+b.h,0);
+    let adv=(data.advances[currentKey]||{})[i]||0;
+    let net=h*w.rate-adv;
+    summary.innerHTML+=`<div class="row">${w.name}<span>${net} zł</span></div>`;
+  });
 
-totalEl.textContent="RAZEM: "+total+" zł";
-drawChart(projTotals);
+  totalEl.textContent="RAZEM: "+total+" zł";
+  drawChart(projTotals);
 }
 
 function drawChart(projTotals){
-let ctx=document.getElementById("chart");
-if(window.myChart) window.myChart.destroy();
-window.myChart=new Chart(ctx,{
-type:'bar',
-data:{
-labels:Object.keys(projTotals),
-datasets:[{
-label:'Koszt projektu',
-data:Object.values(projTotals)
-}]
-}
-});
+  let ctx=document.getElementById("chart");
+  if(window.myChart) window.myChart.destroy();
+  window.myChart=new Chart(ctx,{
+    type:"bar",
+    data:{
+      labels:Object.keys(projTotals),
+      datasets:[{label:"Koszt projektu", data:Object.values(projTotals)}]
+    }
+  });
 }
 
 function exportExcel(){
-let rows=[["Projekt","Kwota"]];
-Object.entries(
-(data.entries[currentKey]||[]).reduce((a,e)=>{
-let w=data.workers[e.w];
-a[e.p]=(a[e.p]||0)+e.h*w.rate;
-return a;
-},{})).forEach(r=>rows.push(r));
+  let rows=[["Projekt","Kwota"]];
+  Object.entries(
+    (data.entries[currentKey]||[]).reduce((a,e)=>{
+      let w=data.workers[e.w];
+      if(!w) return a;
+      a[e.p]=(a[e.p]||0)+e.h*w.rate;
+      return a;
+    },{})
+  ).forEach(r=>rows.push(r));
 
-let csv=rows.map(r=>r.join(";")).join("\n");
-let blob=new Blob([csv],{type:"text/csv"});
-let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="raport_"+currentKey+".csv";
-a.click();
+  let csv=rows.map(r=>r.join(";")).join("\n");
+  let blob=new Blob([csv],{type:"text/csv"});
+  let a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="raport_"+currentKey+".csv";
+  a.click();
 }
 
 buildDates();
