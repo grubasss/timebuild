@@ -7,18 +7,80 @@
 
 <style>
 body{margin:0;font-family:system-ui;background:#f4f6f5}
-header{background:#2f4f4f;color:white;padding:14px;text-align:center;font-size:18px}
-.container{max-width:1200px;margin:auto;padding:14px}
-.calendar-header,.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.calendar-header div{text-align:center;font-weight:600}
-.day{background:white;border-radius:12px;padding:8px;min-height:80px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.05)}
-.day.active{outline:3px solid #6faf8e}
-.card{background:white;padding:14px;border-radius:14px;margin-top:12px}
-input,select,button{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;margin-top:6px}
-button{background:#6faf8e;color:white;border:none;font-weight:600}
-.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
-.small{width:80px}
-.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
+header{background:#2f4f4f;color:white;padding:12px;text-align:center}
+.container{max-width:1100px;margin:auto;padding:14px}
+
+.calendar-header,.calendar{
+display:grid;
+grid-template-columns:repeat(7,1fr);
+gap:4px;
+}
+
+.calendar-header div{
+text-align:center;
+font-weight:600;
+font-size:13px;
+}
+
+.day{
+background:white;
+border-radius:10px;
+padding:6px;
+min-height:60px;
+cursor:pointer;
+font-size:12px;
+box-shadow:0 3px 8px rgba(0,0,0,.05);
+}
+
+.day.active{outline:2px solid #6faf8e}
+
+.card{
+background:white;
+padding:14px;
+border-radius:14px;
+margin-top:12px
+}
+
+input,select,button{
+width:100%;
+padding:8px;
+border-radius:8px;
+border:1px solid #ddd;
+margin-top:6px;
+font-size:14px
+}
+
+button{
+background:#6faf8e;
+color:white;
+border:none;
+font-weight:600
+}
+
+.row{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:6px 0;
+border-bottom:1px solid #eee
+}
+
+.small{width:70px}
+
+.nav{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:8px
+}
+
+.total-box{
+background:#e9f5ef;
+padding:10px;
+border-radius:10px;
+margin-top:10px;
+font-weight:600
+}
 </style>
 </head>
 
@@ -35,7 +97,8 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <div class="calendar-header">
-<div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div>
+<div>Pn</div><div>Wt</div><div>Śr</div>
+<div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div>
 </div>
 
 <div class="calendar" id="calendar"></div>
@@ -58,10 +121,16 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <div class="card">
-<h3>Projekty</h3>
-<input id="newProject" placeholder="Nazwa projektu">
-<button onclick="addProject()">Dodaj</button>
-<div id="projectManage"></div>
+<h3>Zaliczki</h3>
+<select id="advanceWorker"></select>
+<input type="number" id="advanceAmount" placeholder="Kwota zaliczki">
+<button onclick="addAdvance()">Dodaj zaliczkę</button>
+</div>
+
+<div class="card">
+<h3>Podsumowanie miesiąca</h3>
+<div id="summary"></div>
+<div class="total-box" id="totalHours"></div>
 </div>
 
 </div>
@@ -69,14 +138,15 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 <script>
 let data = JSON.parse(localStorage.getItem("tb")) || {
 workers:[],
-projects:[],
-entries:{}
+projects:["Dom Wola"],
+entries:{},
+advances:{}
 };
 
 let current=new Date();
 let selected=null;
 
-const days=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
+const dayNames=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
 
 function save(){localStorage.setItem("tb",JSON.stringify(data))}
 function key(d){return d.toISOString().slice(0,10)}
@@ -98,7 +168,7 @@ let sum=(data.entries[k]||[]).reduce((a,b)=>a+b.h,0);
 
 let el=document.createElement("div");
 el.className="day"+(selected===k?" active":"");
-el.innerHTML=`<b>${d}</b><br>${sum}h`;
+el.innerHTML=`<b>${d}</b><br>${dayNames[(date.getDay()+6)%7]}<br>${sum}h`;
 el.onclick=()=>{selected=k;renderCalendar();renderDay()};
 calendar.appendChild(el);
 }
@@ -108,61 +178,74 @@ function renderDay(){
 dayList.innerHTML="";
 (data.entries[selected]||[]).forEach((e,i)=>{
 dayList.innerHTML+=`
-<div class="row">${data.workers[e.w].name} – ${e.h}h (${e.p})
+<div class="row">${data.workers[e.w].name} – ${e.h}h
 <button onclick="removeEntry(${i})">❌</button></div>`;
 });
 }
 
 function addEntry(){
-if(!selected||!hours.value) return;
+if(!selected||!hours.value)return;
 data.entries[selected]=data.entries[selected]||[];
-data.entries[selected].push({w:+worker.value,p:project.value,h:+hours.value});
+data.entries[selected].push({w:+worker.value,h:+hours.value});
 hours.value="";
-save();renderCalendar();renderDay();
+save();renderAll();
 }
 
 function removeEntry(i){
 data.entries[selected].splice(i,1);
-save();renderCalendar();renderDay();
+save();renderAll();
 }
 
 function addWorker(){
-if(!newWorker.value||!newRate.value) return;
+if(!newWorker.value||!newRate.value)return;
 data.workers.push({name:newWorker.value,rate:+newRate.value});
 newWorker.value="";newRate.value="";
 save();renderAll();
 }
 
-function addProject(){
-if(!newProject.value) return;
-data.projects.push(newProject.value);
-newProject.value="";
+function addAdvance(){
+let i=advanceWorker.value;
+data.advances[i]=(data.advances[i]||0)+(+advanceAmount.value);
+advanceAmount.value="";
 save();renderAll();
 }
 
 function renderManage(){
 workerManage.innerHTML="";
-projectManage.innerHTML="";
-
 data.workers.forEach((w,i)=>{
 workerManage.innerHTML+=`
 <div class="row">${w.name}
-<input class="small" type="number" value="${w.rate}" onchange="data.workers[${i}].rate=this.value;save()">
+<input class="small" type="number" value="${w.rate}" onchange="data.workers[${i}].rate=this.value;save();renderSummary()">
 <button onclick="data.workers.splice(${i},1);save();renderAll()">❌</button></div>`;
-});
-
-data.projects.forEach((p,i)=>{
-projectManage.innerHTML+=`
-<div class="row">${p}
-<button onclick="data.projects.splice(${i},1);save();renderAll()">❌</button></div>`;
 });
 }
 
 function renderSelectors(){
 worker.innerHTML="";
-project.innerHTML="";
-data.workers.forEach((w,i)=>worker.innerHTML+=`<option value="${i}">${w.name}</option>`);
-data.projects.forEach(p=>project.innerHTML+=`<option>${p}</option>`);
+advanceWorker.innerHTML="";
+data.workers.forEach((w,i)=>{
+worker.innerHTML+=`<option value="${i}">${w.name}</option>`;
+advanceWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
+});
+}
+
+function renderSummary(){
+summary.innerHTML="";
+let totalH=0;
+
+data.workers.forEach((w,i)=>{
+let hoursSum=0;
+Object.values(data.entries).forEach(day=>{
+day.forEach(e=>{
+if(e.w==i)hoursSum+=e.h;
+});
+});
+let payout=hoursSum*w.rate-(data.advances[i]||0);
+totalH+=hoursSum;
+summary.innerHTML+=`
+<div class="row">${w.name} – ${hoursSum}h – ${payout} zł</div>`;
+});
+totalHours.textContent="Łączna liczba godzin w miesiącu: "+totalH+"h";
 }
 
 function renderAll(){
@@ -170,6 +253,7 @@ renderCalendar();
 renderDay();
 renderManage();
 renderSelectors();
+renderSummary();
 }
 
 function prevMonth(){current.setMonth(current.getMonth()-1);renderCalendar()}
