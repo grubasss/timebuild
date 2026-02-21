@@ -9,98 +9,48 @@
 --main:#2563eb;
 --bg:#f1f5f9;
 --card:#ffffff;
---text:#0f172a;
 --soft:#e5e7eb;
 }
 
-body{
-margin:0;
-font-family:system-ui, -apple-system, BlinkMacSystemFont;
-background:var(--bg);
-color:var(--text);
-}
+body{margin:0;font-family:system-ui;background:var(--bg)}
 
-header{
-background:var(--main);
-color:white;
-padding:16px;
-font-size:20px;
-font-weight:600;
-}
+header{background:var(--main);color:#fff;padding:14px;font-size:18px;font-weight:600}
 
-.container{
-padding:14px;
-max-width:800px;
-margin:auto;
-}
+.container{max-width:900px;margin:auto;padding:14px}
 
-.card{
-background:var(--card);
-border-radius:14px;
-padding:14px;
-margin-bottom:14px;
-box-shadow:0 6px 18px rgba(0,0,0,.06);
-}
+.card{background:#fff;padding:14px;border-radius:14px;margin-bottom:14px;box-shadow:0 6px 16px rgba(0,0,0,.06)}
 
-h3{
-margin:0 0 10px 0;
-}
-
-input,select{
+input,select,button{
 width:100%;
 padding:10px;
+margin:6px 0;
 border-radius:10px;
-border:1px solid var(--soft);
-margin-bottom:8px;
-font-size:15px;
+border:1px solid var(--soft)
 }
 
 button{
-width:100%;
 background:var(--main);
+color:#fff;
 border:none;
-color:white;
-padding:12px;
-border-radius:12px;
 font-size:16px;
-font-weight:600;
-cursor:pointer;
+font-weight:600
 }
 
-.small{
-font-size:13px;
-color:#475569;
-}
+.row{display:flex;gap:10px;flex-wrap:wrap}
 
-.worker{
-padding:8px 0;
-border-bottom:1px solid var(--soft);
-}
+.worker{border-bottom:1px solid var(--soft);padding:8px 0}
 
-.badge{
-display:inline-block;
-background:#e0e7ff;
-color:#1e3a8a;
-padding:4px 10px;
-border-radius:20px;
-font-size:13px;
-margin-top:4px;
-}
-
-.total{
-font-weight:700;
-font-size:17px;
-}
+.total{font-weight:700;margin-top:8px}
 </style>
 </head>
 <body>
 
-<header>ð TimeBuild Pro â House Concept</header>
+<header>🏗 TimeBuild Pro — House Concept</header>
 
 <div class="container">
 
 <div class="card">
-<h3>ð DzieÅ pracy</h3>
+<h3>Dzień pracy</h3>
 <input type="date" id="date">
 <input type="number" id="hours" placeholder="Godziny dla wszystkich">
 <select id="project">
@@ -112,39 +62,48 @@ font-size:17px;
 </div>
 
 <div class="card">
-<h3>ð Podsumowanie</h3>
+<h3>Podsumowanie</h3>
 <div id="summary"></div>
 </div>
 
 </div>
 
 <script>
-let workers=[
-{name:"Åukasz Nowak",rate:25,hours:0},
-{name:"Ariel Walczak",rate:25,hours:0},
-{name:"Daniel Daniel",rate:25,hours:0}
+let workers = JSON.parse(localStorage.getItem("workers")) || [
+ {name:"Łukasz Nowak", rate:25, hours:0},
+ {name:"Ariel Walczak", rate:25, hours:0},
+ {name:"Daniel Daniel", rate:25, hours:0}
 ];
 
+function save(){
+ localStorage.setItem("workers", JSON.stringify(workers));
+}
+
 function addDay(){
-let h=Number(hours.value);
-workers.forEach(w=>w.hours+=h);
-render();
+ let h = Number(hours.value);
+ if(!h) return;
+
+ workers.forEach(w => w.hours += h);
+ save();
+ render();
 }
 
 function render(){
-summary.innerHTML="";
-let total=0;
-workers.forEach(w=>{
-let pay=w.hours*w.rate;
-total+=pay;
-summary.innerHTML+=`
-<div class="worker">
-<b>${w.name}</b><br>
-<span class="badge">${w.hours} h</span><br>
-<span class="small">Do wypÅaty: ${pay} zÅ</span>
-</div>`;
-});
-summary.innerHTML+=`<p class="total">Razem: ${total} zÅ</p>`;
+ summary.innerHTML="";
+ let total = 0;
+
+ workers.forEach(w=>{
+   let pay = w.hours * w.rate;
+   total += pay;
+   summary.innerHTML += `
+    <div class="worker">
+      <b>${w.name}</b><br>
+      Godziny: ${w.hours}h<br>
+      Do wypłaty: ${pay} zł
+    </div>`;
+ });
+
+ summary.innerHTML += `<div class="total">Razem: ${total} zł</div>`;
 }
 
 render();
