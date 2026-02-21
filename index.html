@@ -2,7 +2,7 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>TimeBuild Pro — House Concept</title>
+<title>House Concept — TimeBuild Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
@@ -11,12 +11,12 @@
 --dark:#2F3A3F;
 --bg:#F4F7F6;
 --card:#FFFFFF;
---soft:#D1D5DB;
+--soft:#E5E7EB;
 }
 
 body{
 margin:0;
-font-family:system-ui,-apple-system,BlinkMacSystemFont;
+font-family:system-ui,-apple-system;
 background:var(--bg);
 }
 
@@ -26,17 +26,41 @@ color:white;
 padding:14px 18px;
 display:flex;
 align-items:center;
-gap:14px;
+gap:12px;
 }
 
 header img{
-height:46px;
+height:42px;
 }
 
 .container{
-max-width:950px;
+max-width:1000px;
 margin:auto;
 padding:16px;
+}
+
+.stats{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:14px;
+margin-bottom:18px;
+}
+
+.stat-card{
+background:var(--card);
+padding:14px;
+border-radius:16px;
+box-shadow:0 6px 18px rgba(0,0,0,.05);
+}
+
+.stat-card h4{
+margin:0;
+font-size:14px;
+color:#555;
+}
+
+.stat-card b{
+font-size:20px;
 }
 
 .card{
@@ -47,14 +71,14 @@ margin-bottom:16px;
 box-shadow:0 8px 20px rgba(0,0,0,.06);
 }
 
-h3{margin:0 0 10px 0}
+h3{margin-top:0}
 
 input,select,button{
 width:100%;
-padding:11px;
+padding:12px;
+margin:6px 0;
 border-radius:12px;
 border:1px solid var(--soft);
-margin:6px 0;
 font-size:15px;
 }
 
@@ -63,7 +87,6 @@ background:var(--green);
 color:white;
 border:none;
 font-weight:600;
-cursor:pointer;
 }
 
 .project{
@@ -73,22 +96,15 @@ padding:8px 0;
 border-bottom:1px solid var(--soft);
 }
 
-.delete{
-background:#dc2626;
-padding:6px 10px;
-font-size:13px;
-border-radius:8px;
-}
-
 .worker{
 border-bottom:1px solid var(--soft);
-padding:10px 0;
+padding:8px 0;
 }
 
 .total{
 font-weight:700;
-margin-top:10px;
-font-size:17px;
+margin-top:8px;
+font-size:18px;
 }
 </style>
 </head>
@@ -96,37 +112,45 @@ font-size:17px;
 <body>
 
 <header>
-<img src="logo.png" alt="House Concept">
+<img src="logo.png">
 <b>TimeBuild Pro</b>
 </header>
 
 <div class="container">
 
+<div class="stats">
+<div class="stat-card">
+<h4>Godziny</h4>
+<b id="totalHours">0h</b>
+</div>
+<div class="stat-card">
+<h4>Koszt robocizny</h4>
+<b id="totalCost">0 zł</b>
+</div>
+<div class="stat-card">
+<h4>Projekty</h4>
+<b id="projectCount">0</b>
+</div>
+</div>
+
 <div class="card">
-<h3>➕ Projekty</h3>
+<h3>📁 Projekty</h3>
 <input id="newProject" placeholder="Nazwa projektu">
 <button onclick="addProject()">Dodaj projekt</button>
 <div id="projectList"></div>
 </div>
 
 <div class="card">
-<h3>📅 Godziny (wszyscy obecni)</h3>
+<h3>📅 Godziny</h3>
 <input type="number" id="hours" placeholder="Godziny dla wszystkich">
 <select id="projectSelect"></select>
 <button onclick="addHours()">Dodaj godziny</button>
 </div>
 
 <div class="card">
-<h3>💰 Zaliczka dla wszystkich</h3>
+<h3>💰 Zaliczki (wszyscy)</h3>
 <input type="number" id="advanceAll" placeholder="Kwota">
 <button onclick="addAdvanceAll()">Dodaj wszystkim</button>
-</div>
-
-<div class="card">
-<h3>👤 Zaliczka indywidualna</h3>
-<select id="workerSelect"></select>
-<input type="number" id="advanceOne" placeholder="Kwota">
-<button onclick="addAdvanceOne()">Dodaj osobno</button>
 </div>
 
 <div class="card">
@@ -139,9 +163,9 @@ font-size:17px;
 <script>
 let projects = JSON.parse(localStorage.getItem("projects")) || ["Dom Wola"];
 let workers = JSON.parse(localStorage.getItem("workers")) || [
- {name:"Łukasz Nowak",rate:25,hours:0,adv:[]},
- {name:"Ariel Walczak",rate:25,hours:0,adv:[]},
- {name:"Daniel Daniel",rate:25,hours:0,adv:[]}
+{name:"Łukasz Nowak",rate:25,hours:0,adv:0},
+{name:"Ariel Walczak",rate:25,hours:0,adv:0},
+{name:"Daniel Daniel",rate:25,hours:0,adv:0}
 ];
 
 function save(){
@@ -150,73 +174,60 @@ localStorage.setItem("workers",JSON.stringify(workers));
 }
 
 function addProject(){
-if(!newProject.value.trim()) return;
-projects.push(newProject.value.trim());
+if(!newProject.value) return;
+projects.push(newProject.value);
 newProject.value="";
-save();renderProjects();
-}
-
-function renderProjects(){
-projectSelect.innerHTML="";
-projectList.innerHTML="";
-projects.forEach((p,i)=>{
-projectSelect.innerHTML+=`<option>${p}</option>`;
-projectList.innerHTML+=`
-<div class="project">
-${p}
-<button class="delete" onclick="projects.splice(${i},1);save();renderProjects()">Usuń</button>
-</div>`;
-});
+save();
+render();
 }
 
 function addHours(){
 let h=Number(hours.value);
 if(!h) return;
 workers.forEach(w=>w.hours+=h);
-save();render();
+save();
+render();
 }
 
 function addAdvanceAll(){
 let a=Number(advanceAll.value);
 if(!a) return;
-workers.forEach(w=>w.adv.push(a));
+workers.forEach(w=>w.adv+=a);
 advanceAll.value="";
-save();render();
-}
-
-function addAdvanceOne(){
-let i=workerSelect.value;
-let a=Number(advanceOne.value);
-if(!a) return;
-workers[i].adv.push(a);
-advanceOne.value="";
-save();render();
+save();
+render();
 }
 
 function render(){
+projectSelect.innerHTML="";
+projectList.innerHTML="";
 summary.innerHTML="";
-workerSelect.innerHTML="";
-let total=0;
+let totalH=0;
+let totalC=0;
 
-workers.forEach((w,i)=>{
-workerSelect.innerHTML+=`<option value="${i}">${w.name}</option>`;
-let adv=w.adv.reduce((s,x)=>s+x,0);
-let pay=w.hours*w.rate-adv;
-total+=pay;
+projects.forEach(p=>{
+projectSelect.innerHTML+=`<option>${p}</option>`;
+projectList.innerHTML+=`<div class="project">${p}</div>`;
+});
 
+workers.forEach(w=>{
+let pay=w.hours*w.rate-w.adv;
+totalH+=w.hours;
+totalC+=pay;
 summary.innerHTML+=`
 <div class="worker">
 <b>${w.name}</b><br>
 Godziny: ${w.hours}h<br>
-Zaliczki: ${adv} zł<br>
+Zaliczki: ${w.adv} zł<br>
 Do wypłaty: <b>${pay} zł</b>
 </div>`;
 });
 
-summary.innerHTML+=`<div class="total">Razem: ${total} zł</div>`;
+totalHours.textContent=totalH+"h";
+totalCost.textContent=totalC+" zł";
+projectCount.textContent=projects.length;
 }
 
-renderProjects();
 render();
 </script>
 
