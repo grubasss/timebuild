@@ -10,91 +10,35 @@
 --green:#6FAF8E;
 --dark:#2F3A3F;
 --bg:#F3F6F5;
---card:#ffffff;
+--card:#fff;
 --border:#E5E7EB;
 }
 
-body{
-margin:0;
-font-family:system-ui,-apple-system;
-background:var(--bg);
-}
+body{margin:0;font-family:system-ui;background:var(--bg)}
 
 header{
 background:linear-gradient(90deg,var(--green),var(--dark));
 color:white;
 padding:16px;
-display:flex;
-align-items:center;
-gap:14px;
+font-weight:600;
 }
 
-header img{height:44px}
-
-.container{
-max-width:1200px;
-margin:auto;
-padding:20px;
-}
-
-.stats{
-display:grid;
-grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-gap:16px;
-margin-bottom:20px;
-}
-
-.stat{
-background:var(--card);
-padding:16px;
-border-radius:18px;
-box-shadow:0 8px 20px rgba(0,0,0,.05);
-}
-
-.stat h4{margin:0;color:#555;font-size:14px}
-.stat b{font-size:22px}
-
-.grid{
-display:grid;
-grid-template-columns:2fr 1fr;
-gap:20px;
-}
+.container{max-width:1000px;margin:auto;padding:18px}
 
 .card{
 background:var(--card);
-padding:18px;
-border-radius:18px;
-box-shadow:0 10px 25px rgba(0,0,0,.05);
-margin-bottom:20px;
-}
-
-.project{
-padding:12px 0;
-border-bottom:1px solid var(--border);
-}
-
-.project:last-child{border:none}
-
-.progress{
-height:8px;
-background:#ddd;
-border-radius:8px;
-margin-top:6px;
-overflow:hidden;
-}
-
-.progress div{
-height:100%;
-background:var(--green);
+padding:16px;
+border-radius:16px;
+box-shadow:0 6px 18px rgba(0,0,0,.05);
+margin-bottom:16px;
 }
 
 input,select,button{
 width:100%;
-padding:12px;
+padding:11px;
 margin:6px 0;
 border-radius:12px;
 border:1px solid var(--border);
-font-size:15px;
 }
 
 button{
@@ -105,67 +49,191 @@ font-weight:600;
 cursor:pointer;
 }
 
-.worker{
+.row{display:flex;gap:8px;flex-wrap:wrap}
+
+.item{
+display:flex;
+justify-content:space-between;
+padding:6px 0;
 border-bottom:1px solid var(--border);
-padding:8px 0;
 }
 
-.total{
-font-weight:700;
-margin-top:10px;
-font-size:18px;
+.small{
+background:#dc2626;
+padding:4px 8px;
+font-size:13px;
+border-radius:8px;
 }
+
+.worker{
+display:flex;
+justify-content:space-between;
+padding:6px 0;
+border-bottom:1px solid var(--border);
+}
+
+.absent{color:#dc2626;font-weight:600}
+.total{font-weight:700;font-size:18px;margin-top:10px}
 </style>
 </head>
 
 <body>
 
-<header>
-<img src="logo.png">
-<b>TimeBuild Pro</b>
-</header>
+<header>🏗 House Concept — TimeBuild Pro</header>
 
 <div class="container">
 
-<div class="stats">
-<div class="stat">
-<h4>Godziny łącznie</h4>
-<b id="totalHours">0h</b>
-</div>
-<div class="stat">
-<h4>Koszt robocizny</h4>
-<b id="totalCost">0 zł</b>
-</div>
-<div class="stat">
-<h4>Aktywne projekty</h4>
-<b id="projectCount">0</b>
-</div>
-<div class="stat">
-<h4>Pracownicy</h4>
-<b>3</b>
-</div>
-</div>
-
-<div class="grid">
-
-<div>
 <div class="card">
-<h3>🏗 Projekty</h3>
+<h3>👷 Pracownicy</h3>
+<input id="newWorker" placeholder="Imię i nazwisko">
+<button onclick="addWorker()">Dodaj pracownika</button>
+<div id="workerList"></div>
+</div>
+
+<div class="card">
+<h3>🏗 Projekty / miejsca pracy</h3>
 <input id="newProject" placeholder="Nazwa projektu">
 <button onclick="addProject()">Dodaj projekt</button>
 <div id="projectList"></div>
 </div>
-</div>
 
-<div>
 <div class="card">
-<h3>📅 Dodaj godziny</h3>
-<input type="number" id="hours" placeholder="Godziny dla wszystkich">
-<select id="projectSelect"></select>
-<button onclick="addHours()">Zapisz</button>
+<h3>✅ Wszyscy obecni</h3>
+<input type="number" id="bulkHours" placeholder="Godziny dla wszystkich">
+<select id="bulkProject"></select>
+<button onclick="addBulk()">Dodaj godziny</button>
 </div>
 
 <div class="card">
-<h3>💰 Zaliczka (wszyscy)</h3>
-<input type="number" id="advanceAll" placeholder="Kwota">
-<button onclick
+<h3>👤 Indywidualnie</h3>
+<select id="workerSelect"></select>
+<input type="number" id="singleHours" placeholder="Godziny">
+<select id="singleProject"></select>
+<button onclick="addSingle()">Dodaj pracownikowi</button>
+</div>
+
+<div class="card">
+<h3>🚫 Obecność</h3>
+<div id="absenceList"></div>
+</div>
+
+<div class="card">
+<h3>📊 Podsumowanie</h3>
+<div id="summary"></div>
+<div class="total" id="totalPay"></div>
+</div>
+
+</div>
+
+<script>
+let workers = JSON.parse(localStorage.getItem("workers")) || [
+{name:"Łukasz Nowak",rate:25,hours:0,absent:false},
+{name:"Ariel Walczak",rate:25,hours:0,absent:false},
+{name:"Daniel Daniel",rate:25,hours:0,absent:false}
+];
+
+let projects = JSON.parse(localStorage.getItem("projects")) || ["Dom Wola"];
+
+function save(){
+localStorage.setItem("workers",JSON.stringify(workers));
+localStorage.setItem("projects",JSON.stringify(projects));
+}
+
+function addWorker(){
+if(!newWorker.value.trim()) return;
+workers.push({name:newWorker.value,rate:25,hours:0,absent:false});
+newWorker.value="";
+save();render();
+}
+
+function removeWorker(i){
+workers.splice(i,1);
+save();render();
+}
+
+function addProject(){
+if(!newProject.value.trim()) return;
+projects.push(newProject.value);
+newProject.value="";
+save();render();
+}
+
+function removeProject(i){
+projects.splice(i,1);
+save();render();
+}
+
+function addBulk(){
+let h=Number(bulkHours.value);
+if(!h) return;
+workers.forEach(w=>{
+ if(!w.absent) w.hours+=h;
+});
+bulkHours.value="";
+save();render();
+}
+
+function addSingle(){
+let i=workerSelect.value;
+let h=Number(singleHours.value);
+if(!h) return;
+workers[i].hours+=h;
+singleHours.value="";
+save();render();
+}
+
+function toggleAbsent(i){
+workers[i].absent=!workers[i].absent;
+save();render();
+}
+
+function render(){
+workerList.innerHTML="";
+projectList.innerHTML="";
+bulkProject.innerHTML="";
+singleProject.innerHTML="";
+workerSelect.innerHTML="";
+absenceList.innerHTML="";
+summary.innerHTML="";
+let total=0;
+
+workers.forEach((w,i)=>{
+workerList.innerHTML+=`
+<div class="item">${w.name}
+<button class="small" onclick="removeWorker(${i})">Usuń</button></div>`;
+
+workerSelect.innerHTML+=`<option value="${i}">${w.name}</option>`;
+
+absenceList.innerHTML+=`
+<div class="worker">
+${w.name}
+<button onclick="toggleAbsent(${i})" class="${w.absent?'absent':''}">
+${w.absent?"NIEOBECNY":"OBECNY"}
+</button></div>`;
+
+let pay=w.hours*25;
+total+=pay;
+
+summary.innerHTML+=`
+<div class="worker">
+<b>${w.name}</b>
+<span>${w.hours}h → ${pay} zł</span>
+</div>`;
+});
+
+projects.forEach((p,i)=>{
+projectList.innerHTML+=`
+<div class="item">${p}
+<button class="small" onclick="removeProject(${i})">Usuń</button></div>`;
+bulkProject.innerHTML+=`<option>${p}</option>`;
+singleProject.innerHTML+=`<option>${p}</option>`;
+});
+
+totalPay.textContent="RAZEM: "+total+" zł";
+}
+
+render();
+</script>
+
+</body>
+</html>
