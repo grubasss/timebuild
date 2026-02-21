@@ -1,104 +1,153 @@
 <!DOCTYPE html>
-<html>
+<html lang="pl">
 <head>
 <meta charset="UTF-8">
 <title>TimeBuild Pro</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <style>
-body{font-family:Arial;padding:15px}
-input,select,button{padding:6px;margin:4px 0;width:100%}
-.card{border:1px solid #ccc;padding:10px;margin:10px 0}
-h2{margin-top:30px}
+:root{
+--main:#2563eb;
+--bg:#f1f5f9;
+--card:#ffffff;
+--text:#0f172a;
+--soft:#e5e7eb;
+}
+
+body{
+margin:0;
+font-family:system-ui, -apple-system, BlinkMacSystemFont;
+background:var(--bg);
+color:var(--text);
+}
+
+header{
+background:var(--main);
+color:white;
+padding:16px;
+font-size:20px;
+font-weight:600;
+}
+
+.container{
+padding:14px;
+max-width:800px;
+margin:auto;
+}
+
+.card{
+background:var(--card);
+border-radius:14px;
+padding:14px;
+margin-bottom:14px;
+box-shadow:0 6px 18px rgba(0,0,0,.06);
+}
+
+h3{
+margin:0 0 10px 0;
+}
+
+input,select{
+width:100%;
+padding:10px;
+border-radius:10px;
+border:1px solid var(--soft);
+margin-bottom:8px;
+font-size:15px;
+}
+
+button{
+width:100%;
+background:var(--main);
+border:none;
+color:white;
+padding:12px;
+border-radius:12px;
+font-size:16px;
+font-weight:600;
+cursor:pointer;
+}
+
+.small{
+font-size:13px;
+color:#475569;
+}
+
+.worker{
+padding:8px 0;
+border-bottom:1px solid var(--soft);
+}
+
+.badge{
+display:inline-block;
+background:#e0e7ff;
+color:#1e3a8a;
+padding:4px 10px;
+border-radius:20px;
+font-size:13px;
+margin-top:4px;
+}
+
+.total{
+font-weight:700;
+font-size:17px;
+}
 </style>
 </head>
 <body>
 
-<h1>🏗 TimeBuild Pro</h1>
+<header>ð TimeBuild Pro â House Concept</header>
 
-<h2>🏢 Firma</h2>
-<input id="companyName" placeholder="Nazwa firmy">
-<button onclick="addCompany()">Dodaj firmę</button>
-<select id="companySelect"></select>
+<div class="container">
 
-<h2>👷 Pracownik</h2>
-<input id="empName" placeholder="Imię">
-<input id="empRate" type="number" placeholder="Stawka/h">
-<button onclick="addEmployee()">Dodaj pracownika</button>
+<div class="card">
+<h3>ð DzieÅ pracy</h3>
+<input type="date" id="date">
+<input type="number" id="hours" placeholder="Godziny dla wszystkich">
+<select id="project">
+<option>Dom Wola</option>
+<option>Elewacja Piaseczno</option>
+<option>Remont Warszawa</option>
+</select>
+<button onclick="addDay()">Wszyscy obecni</button>
+</div>
 
-<h2>⏰ Godziny</h2>
-<select id="empSelect"></select>
-<input id="workHours" type="number" placeholder="Liczba godzin">
-<button onclick="addHours()">Zapisz</button>
-
-<h2>💰 Zaliczka</h2>
-<select id="advSelect"></select>
-<input id="advAmount" type="number" placeholder="Kwota">
-<button onclick="addAdvance()">Dodaj</button>
-
-<h2>📊 Podsumowanie</h2>
+<div class="card">
+<h3>ð Podsumowanie</h3>
 <div id="summary"></div>
+</div>
+
+</div>
 
 <script>
-let companies=[]
-let employees=[]
-let hours=[]
-let advances=[]
+let workers=[
+{name:"Åukasz Nowak",rate:25,hours:0},
+{name:"Ariel Walczak",rate:25,hours:0},
+{name:"Daniel Daniel",rate:25,hours:0}
+];
 
-function addCompany(){
-  companies.push({id:Date.now(),name:companyName.value})
-  companyName.value=''
-  render()
-}
-
-function addEmployee(){
-  employees.push({
-    id:Date.now(),
-    name:empName.value,
-    rate:Number(empRate.value),
-    companyId:Number(companySelect.value)
-  })
-  empName.value=''
-  empRate.value=''
-  render()
-}
-
-function addHours(){
-  hours.push({
-    employeeId:Number(empSelect.value),
-    h:Number(workHours.value)
-  })
-  workHours.value=''
-  render()
-}
-
-function addAdvance(){
-  advances.push({
-    employeeId:Number(advSelect.value),
-    a:Number(advAmount.value)
-  })
-  advAmount.value=''
-  render()
+function addDay(){
+let h=Number(hours.value);
+workers.forEach(w=>w.hours+=h);
+render();
 }
 
 function render(){
-  companySelect.innerHTML=companies.map(c=>`<option value="${c.id}">${c.name}</option>`).join('')
-  empSelect.innerHTML=advSelect.innerHTML=
-    employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')
-
-  summary.innerHTML=''
-  employees.forEach(e=>{
-    let h=hours.filter(x=>x.employeeId===e.id).reduce((s,x)=>s+x.h,0)
-    let a=advances.filter(x=>x.employeeId===e.id).reduce((s,x)=>s+x.a,0)
-    let pay=h*e.rate-a
-    summary.innerHTML+=`
-      <div class="card">
-      <b>${e.name}</b><br>
-      Godziny: ${h}<br>
-      Zaliczki: ${a} zł<br>
-      Do wypłaty: <b>${pay} zł</b>
-      </div>`
-  })
+summary.innerHTML="";
+let total=0;
+workers.forEach(w=>{
+let pay=w.hours*w.rate;
+total+=pay;
+summary.innerHTML+=`
+<div class="worker">
+<b>${w.name}</b><br>
+<span class="badge">${w.hours} h</span><br>
+<span class="small">Do wypÅaty: ${pay} zÅ</span>
+</div>`;
+});
+summary.innerHTML+=`<p class="total">Razem: ${total} zÅ</p>`;
 }
+
+render();
 </script>
 
 </body>
