@@ -7,23 +7,38 @@
 
 <style>
 body{margin:0;font-family:system-ui;background:#f4f6f5}
-header{background:#2f4f4f;color:white;padding:14px;font-size:18px;text-align:center}
+header{
+background:#2f4f4f;
+color:white;
+padding:12px;
+display:flex;
+align-items:center;
+gap:12px;
+justify-content:center;
+}
+header img{height:46px}
 .container{max-width:1100px;margin:auto;padding:14px}
 .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:14px}
 .card{background:white;padding:14px;border-radius:14px;box-shadow:0 6px 16px rgba(0,0,0,.06)}
 .calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.day{background:#e9f0ee;border-radius:10px;padding:8px;text-align:center;cursor:pointer}
+.day{background:#e9f0ee;border-radius:10px;padding:8px;cursor:pointer;text-align:center}
 .day.active{background:#6faf8e;color:white}
 input,select,button{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;margin-top:6px}
 button{background:#6faf8e;color:white;border:none;font-weight:600}
-.row{display:flex;justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee}
-.total{font-weight:700;font-size:18px;margin-top:10px}
+.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+.row button{background:#c0392b;font-size:12px;padding:4px 8px}
+.total{font-size:18px;font-weight:700;margin-top:10px}
+.small{width:70px}
 @media(max-width:850px){.grid{grid-template-columns:1fr}}
 </style>
 </head>
 
 <body>
-<header>🏡 House Concept — TimeBuild Pro</header>
+
+<header>
+<img src="data:image/png;base64,WKLEJ_TUTAJ_BASE64_LOGO">
+<b>TimeBuild Pro</b>
+</header>
 
 <div class="container">
 
@@ -35,15 +50,12 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <div class="card">
-<h3>Wpis godzin</h3>
-
+<h3>Dodaj godziny</h3>
 <select id="worker"></select>
 <select id="project"></select>
 <input type="number" id="hours" placeholder="Godziny">
-
-<button onclick="addEntry()">Dodaj</button>
+<button onclick="addEntry()">Dodaj wpis</button>
 <button onclick="deleteDay()" style="background:#c0392b">Usuń dzień</button>
-
 <h4>Dzień:</h4>
 <div id="dayList"></div>
 </div>
@@ -51,7 +63,22 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <div class="card">
-<h3>Rozliczenie miesiąca</h3>
+<h3>Pracownicy</h3>
+<input id="newWorker" placeholder="Imię i nazwisko">
+<input id="newRate" type="number" placeholder="Stawka zł/h">
+<button onclick="addWorker()">Dodaj</button>
+<div id="workerManage"></div>
+</div>
+
+<div class="card">
+<h3>Projekty</h3>
+<input id="newProject" placeholder="Nazwa projektu">
+<button onclick="addProject()">Dodaj</button>
+<div id="projectManage"></div>
+</div>
+
+<div class="card">
+<h3>Rozliczenie</h3>
 <div id="workerSummary"></div>
 <div class="total" id="totalCost"></div>
 </div>
@@ -64,121 +91,124 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <script>
-const data = JSON.parse(localStorage.getItem("timebuild")) || {
-workers:[
-{name:"Łukasz Nowak",rate:25},
-{name:"Ariel Walczak",rate:25},
-{name:"Daniel Daniel",rate:25}
-],
-projects:["Dom Wola","Elewacja Centrum"],
+let data = JSON.parse(localStorage.getItem("timebuild")) || {
+workers:[],
+projects:[],
 entries:{}
 };
 
-let current = new Date();
-let selectedDate = null;
+let current=new Date();
+let selectedDate=null;
+const daysPL=["Nd","Pn","Wt","Śr","Cz","Pt","Sb"];
 
 function save(){localStorage.setItem("timebuild",JSON.stringify(data));}
-
-function dateKey(d){return d.toISOString().slice(0,10);}
+function key(d){return d.toISOString().slice(0,10);}
 
 function renderCalendar(){
 calendar.innerHTML="";
-const days=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
-
-for(let i=1;i<=days;i++){
-const d=new Date(current.getFullYear(),current.getMonth(),i);
-const k=dateKey(d);
-const hours=(data.entries[k]||[]).reduce((s,e)=>s+e.h,0);
-
-const el=document.createElement("div");
+let last=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
+for(let i=1;i<=last;i++){
+let d=new Date(current.getFullYear(),current.getMonth(),i);
+let k=key(d);
+let sum=(data.entries[k]||[]).reduce((a,b)=>a+b.h,0);
+let el=document.createElement("div");
 el.className="day"+(selectedDate===k?" active":"");
-el.innerHTML=`<b>${i}</b><br>${hours}h`;
+el.innerHTML=`<b>${i}</b><br>${daysPL[d.getDay()]}<br>${sum}h`;
 el.onclick=()=>selectDay(k);
 calendar.appendChild(el);
 }
 }
 
-function selectDay(k){
-selectedDate=k;
-renderCalendar();
-renderDay();
-}
+function selectDay(k){selectedDate=k;renderCalendar();renderDay();}
 
 function renderDay(){
 dayList.innerHTML="";
 (data.entries[selectedDate]||[]).forEach((e,i)=>{
-const w=data.workers[e.w].name;
-dayList.innerHTML+=`
-<div class="row">${w} – ${e.h}h (${e.p})
-<button onclick="removeEntry(${i})">❌</button></div>`;
+let w=data.workers[e.w].name;
+dayList.innerHTML+=`<div class="row">${w} – ${e.h}h (${e.p}) <button onclick="removeEntry(${i})">❌</button></div>`;
 });
 }
 
 function addEntry(){
-if(!selectedDate) return;
+if(!selectedDate||!hours.value) return;
 data.entries[selectedDate]=data.entries[selectedDate]||[];
-data.entries[selectedDate].push({
-w:+worker.value,
-p:project.value,
-h:+hours.value
-});
+data.entries[selectedDate].push({w:+worker.value,p:project.value,h:+hours.value});
 hours.value="";
-save();
-renderCalendar();
-renderDay();
-renderReports();
+save();renderCalendar();renderDay();renderReports();
 }
 
 function removeEntry(i){
 data.entries[selectedDate].splice(i,1);
-save();
-renderDay();
-renderCalendar();
-renderReports();
+save();renderCalendar();renderDay();renderReports();
 }
 
 function deleteDay(){
 delete data.entries[selectedDate];
-save();
-renderCalendar();
-renderDay();
-renderReports();
+save();renderCalendar();renderDay();renderReports();
+}
+
+function addWorker(){
+if(!newWorker.value||!newRate.value) return;
+data.workers.push({name:newWorker.value,rate:+newRate.value});
+newWorker.value="";newRate.value="";
+save();renderAll();
+}
+
+function removeWorker(i){data.workers.splice(i,1);save();renderAll();}
+
+function addProject(){
+if(!newProject.value) return;
+data.projects.push(newProject.value);
+newProject.value="";
+save();renderAll();
+}
+
+function removeProject(i){data.projects.splice(i,1);save();renderAll();}
+
+function renderAll(){renderCalendar();renderManage();renderSelectors();renderReports();}
+
+function renderManage(){
+workerManage.innerHTML="";
+projectManage.innerHTML="";
+data.workers.forEach((w,i)=>{
+workerManage.innerHTML+=`<div class="row">${w.name}
+<input class="small" type="number" value="${w.rate}" onchange="data.workers[${i}].rate=this.value;save();renderReports()">
+<button onclick="removeWorker(${i})">Usuń</button></div>`;
+});
+data.projects.forEach((p,i)=>{
+projectManage.innerHTML+=`<div class="row">${p}<button onclick="removeProject(${i})">Usuń</button></div>`;
+});
+}
+
+function renderSelectors(){
+worker.innerHTML="";
+project.innerHTML="";
+data.workers.forEach((w,i)=>worker.innerHTML+=`<option value="${i}">${w.name}</option>`);
+data.projects.forEach(p=>project.innerHTML+=`<option>${p}</option>`);
 }
 
 function renderReports(){
 workerSummary.innerHTML="";
 projectSummary.innerHTML="";
 let workerTotals={},projectTotals={},total=0;
-
-Object.entries(data.entries).forEach(([date,arr])=>{
-arr.forEach(e=>{
-const cost=e.h*data.workers[e.w].rate;
+Object.values(data.entries).forEach(day=>{
+day.forEach(e=>{
+let cost=e.h*data.workers[e.w].rate;
 workerTotals[data.workers[e.w].name]=(workerTotals[data.workers[e.w].name]||0)+cost;
 projectTotals[e.p]=(projectTotals[e.p]||0)+cost;
 total+=cost;
 });
 });
-
 Object.entries(workerTotals).forEach(([n,v])=>{
 workerSummary.innerHTML+=`<div class="row">${n}<b>${v} zł</b></div>`;
 });
 totalCost.textContent="RAZEM: "+total+" zł";
-
 Object.entries(projectTotals).forEach(([p,v])=>{
 projectSummary.innerHTML+=`<div class="row">${p}<b>${v} zł</b></div>`;
 });
 }
 
-function init(){
-worker.innerHTML="";
-project.innerHTML="";
-data.workers.forEach((w,i)=>worker.innerHTML+=`<option value="${i}">${w.name}</option>`);
-data.projects.forEach(p=>project.innerHTML+=`<option>${p}</option>`);
-renderCalendar();
-renderReports();
-}
-
-init();
+renderAll();
 </script>
 </body>
 </html>
