@@ -2,110 +2,221 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>TimeBuild Pro</title>
+<title>TimeBuild Pro — House Concept</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
 :root{
---main:#2563eb;
---bg:#f1f5f9;
---card:#ffffff;
---soft:#e5e7eb;
+--green:#6FAF8E;
+--dark:#2F3A3F;
+--bg:#F4F7F6;
+--card:#FFFFFF;
+--soft:#D1D5DB;
 }
 
-body{margin:0;font-family:system-ui;background:var(--bg)}
+body{
+margin:0;
+font-family:system-ui,-apple-system,BlinkMacSystemFont;
+background:var(--bg);
+}
 
-header{background:var(--main);color:#fff;padding:14px;font-size:18px;font-weight:600}
+header{
+background:linear-gradient(90deg,var(--green),var(--dark));
+color:white;
+padding:14px 18px;
+display:flex;
+align-items:center;
+gap:14px;
+}
 
-.container{max-width:900px;margin:auto;padding:14px}
+header img{
+height:46px;
+}
 
-.card{background:#fff;padding:14px;border-radius:14px;margin-bottom:14px;box-shadow:0 6px 16px rgba(0,0,0,.06)}
+.container{
+max-width:950px;
+margin:auto;
+padding:16px;
+}
+
+.card{
+background:var(--card);
+padding:16px;
+border-radius:16px;
+margin-bottom:16px;
+box-shadow:0 8px 20px rgba(0,0,0,.06);
+}
+
+h3{margin:0 0 10px 0}
 
 input,select,button{
 width:100%;
-padding:10px;
+padding:11px;
+border-radius:12px;
+border:1px solid var(--soft);
 margin:6px 0;
-border-radius:10px;
-border:1px solid var(--soft)
+font-size:15px;
 }
 
 button{
-background:var(--main);
-color:#fff;
+background:var(--green);
+color:white;
 border:none;
-font-size:16px;
-font-weight:600
+font-weight:600;
+cursor:pointer;
 }
 
-.row{display:flex;gap:10px;flex-wrap:wrap}
+.project{
+display:flex;
+justify-content:space-between;
+padding:8px 0;
+border-bottom:1px solid var(--soft);
+}
 
-.worker{border-bottom:1px solid var(--soft);padding:8px 0}
+.delete{
+background:#dc2626;
+padding:6px 10px;
+font-size:13px;
+border-radius:8px;
+}
 
-.total{font-weight:700;margin-top:8px}
+.worker{
+border-bottom:1px solid var(--soft);
+padding:10px 0;
+}
+
+.total{
+font-weight:700;
+margin-top:10px;
+font-size:17px;
+}
 </style>
 </head>
+
 <body>
 
-<header>🏗 TimeBuild Pro — House Concept</header>
+<header>
+<img src="logo.png" alt="House Concept">
+<b>TimeBuild Pro</b>
+</header>
 
 <div class="container">
 
 <div class="card">
-<h3>Dzień pracy</h3>
-<input type="date" id="date">
-<input type="number" id="hours" placeholder="Godziny dla wszystkich">
-<select id="project">
-<option>Dom Wola</option>
-<option>Elewacja Piaseczno</option>
-<option>Remont Warszawa</option>
-</select>
-<button onclick="addDay()">Wszyscy obecni</button>
+<h3>➕ Projekty</h3>
+<input id="newProject" placeholder="Nazwa projektu">
+<button onclick="addProject()">Dodaj projekt</button>
+<div id="projectList"></div>
 </div>
 
 <div class="card">
-<h3>Podsumowanie</h3>
+<h3>📅 Godziny (wszyscy obecni)</h3>
+<input type="number" id="hours" placeholder="Godziny dla wszystkich">
+<select id="projectSelect"></select>
+<button onclick="addHours()">Dodaj godziny</button>
+</div>
+
+<div class="card">
+<h3>💰 Zaliczka dla wszystkich</h3>
+<input type="number" id="advanceAll" placeholder="Kwota">
+<button onclick="addAdvanceAll()">Dodaj wszystkim</button>
+</div>
+
+<div class="card">
+<h3>👤 Zaliczka indywidualna</h3>
+<select id="workerSelect"></select>
+<input type="number" id="advanceOne" placeholder="Kwota">
+<button onclick="addAdvanceOne()">Dodaj osobno</button>
+</div>
+
+<div class="card">
+<h3>📊 Podsumowanie</h3>
 <div id="summary"></div>
 </div>
 
 </div>
 
 <script>
+let projects = JSON.parse(localStorage.getItem("projects")) || ["Dom Wola"];
 let workers = JSON.parse(localStorage.getItem("workers")) || [
- {name:"Łukasz Nowak", rate:25, hours:0},
- {name:"Ariel Walczak", rate:25, hours:0},
- {name:"Daniel Daniel", rate:25, hours:0}
+ {name:"Łukasz Nowak",rate:25,hours:0,adv:[]},
+ {name:"Ariel Walczak",rate:25,hours:0,adv:[]},
+ {name:"Daniel Daniel",rate:25,hours:0,adv:[]}
 ];
 
 function save(){
- localStorage.setItem("workers", JSON.stringify(workers));
+localStorage.setItem("projects",JSON.stringify(projects));
+localStorage.setItem("workers",JSON.stringify(workers));
 }
 
-function addDay(){
- let h = Number(hours.value);
- if(!h) return;
+function addProject(){
+if(!newProject.value.trim()) return;
+projects.push(newProject.value.trim());
+newProject.value="";
+save();renderProjects();
+}
 
- workers.forEach(w => w.hours += h);
- save();
- render();
+function renderProjects(){
+projectSelect.innerHTML="";
+projectList.innerHTML="";
+projects.forEach((p,i)=>{
+projectSelect.innerHTML+=`<option>${p}</option>`;
+projectList.innerHTML+=`
+<div class="project">
+${p}
+<button class="delete" onclick="projects.splice(${i},1);save();renderProjects()">Usuń</button>
+</div>`;
+});
+}
+
+function addHours(){
+let h=Number(hours.value);
+if(!h) return;
+workers.forEach(w=>w.hours+=h);
+save();render();
+}
+
+function addAdvanceAll(){
+let a=Number(advanceAll.value);
+if(!a) return;
+workers.forEach(w=>w.adv.push(a));
+advanceAll.value="";
+save();render();
+}
+
+function addAdvanceOne(){
+let i=workerSelect.value;
+let a=Number(advanceOne.value);
+if(!a) return;
+workers[i].adv.push(a);
+advanceOne.value="";
+save();render();
 }
 
 function render(){
- summary.innerHTML="";
- let total = 0;
+summary.innerHTML="";
+workerSelect.innerHTML="";
+let total=0;
 
- workers.forEach(w=>{
-   let pay = w.hours * w.rate;
-   total += pay;
-   summary.innerHTML += `
-    <div class="worker">
-      <b>${w.name}</b><br>
-      Godziny: ${w.hours}h<br>
-      Do wypłaty: ${pay} zł
-    </div>`;
- });
+workers.forEach((w,i)=>{
+workerSelect.innerHTML+=`<option value="${i}">${w.name}</option>`;
+let adv=w.adv.reduce((s,x)=>s+x,0);
+let pay=w.hours*w.rate-adv;
+total+=pay;
 
- summary.innerHTML += `<div class="total">Razem: ${total} zł</div>`;
+summary.innerHTML+=`
+<div class="worker">
+<b>${w.name}</b><br>
+Godziny: ${w.hours}h<br>
+Zaliczki: ${adv} zł<br>
+Do wypłaty: <b>${pay} zł</b>
+</div>`;
+});
+
+summary.innerHTML+=`<div class="total">Razem: ${total} zł</div>`;
 }
 
+renderProjects();
 render();
 </script>
 
