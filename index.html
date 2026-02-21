@@ -3,45 +3,28 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>House Concept — TimeBuild Pro</title>
+<title>House Concept – TimeBuild Pro</title>
 
 <style>
 :root{
 --green:#6FAF8E;
 --dark:#3F4F4F;
 --bg:#F4F6F5;
---card:#ffffff;
+--card:#fff;
 --border:#E5E7EB;
 }
 
-body{
-margin:0;
-font-family:system-ui,-apple-system;
-background:var(--bg);
-}
-
+body{margin:0;font-family:system-ui;background:var(--bg)}
 header{
-background:linear-gradient(90deg,#6FAF8E,#3F4F4F);
-color:white;
-padding:18px 30px;
+background:linear-gradient(90deg,var(--green),var(--dark));
+color:#fff;
+padding:14px 22px;
 display:flex;
+align-items:center;
 justify-content:space-between;
-align-items:center;
-font-weight:600;
 }
-
-header .logo{
-display:flex;
-align-items:center;
-gap:12px;
-font-size:20px;
-}
-
-.container{
-max-width:1200px;
-margin:auto;
-padding:20px;
-}
+header img{height:42px}
+.container{max-width:1200px;margin:auto;padding:20px}
 
 .stats{
 display:grid;
@@ -49,25 +32,14 @@ grid-template-columns:repeat(auto-fit,minmax(220px,1fr));
 gap:16px;
 margin-bottom:20px;
 }
-
-.stat-card{
+.card,.stat{
 background:var(--card);
-padding:18px;
+padding:16px;
 border-radius:14px;
-box-shadow:0 5px 18px rgba(0,0,0,.05);
+box-shadow:0 6px 18px rgba(0,0,0,.06);
 }
-
-.stat-card h3{
-margin:0;
-font-size:14px;
-color:#666;
-}
-
-.stat-card p{
-margin:6px 0 0 0;
-font-size:22px;
-font-weight:700;
-}
+.stat h4{margin:0;color:#666}
+.stat b{font-size:22px}
 
 .grid{
 display:grid;
@@ -75,60 +47,43 @@ grid-template-columns:1.4fr 1fr;
 gap:20px;
 }
 
-.card{
-background:var(--card);
-padding:18px;
-border-radius:14px;
-box-shadow:0 5px 18px rgba(0,0,0,.05);
-margin-bottom:20px;
-}
-
 input,select,button{
 width:100%;
 padding:10px;
-margin-top:8px;
 border-radius:10px;
 border:1px solid var(--border);
+margin-top:8px;
 }
-
 button{
 background:var(--green);
 color:white;
-font-weight:600;
 border:none;
+font-weight:600;
 cursor:pointer;
 }
 
-.worker{
+.row{
 display:flex;
 justify-content:space-between;
 padding:6px 0;
 border-bottom:1px solid var(--border);
 }
 
-.worker:last-child{border:none}
-
-.toggle{
+.badge{
 padding:4px 10px;
 border-radius:20px;
 font-size:13px;
 cursor:pointer;
 }
+.on{background:#16a34a;color:#fff}
+.off{background:#dc2626;color:#fff}
 
-.present{background:#16a34a;color:white}
-.absent{background:#dc2626;color:white}
-
-.small-btn{
-background:#dc2626;
-padding:3px 8px;
-font-size:12px;
-border-radius:6px;
-}
-
-.total{
-font-weight:700;
-margin-top:10px;
-font-size:18px;
+.total{font-size:18px;font-weight:700;margin-top:10px}
+.calendar{
+display:flex;
+justify-content:space-between;
+align-items:center;
+margin-bottom:10px;
 }
 </style>
 </head>
@@ -136,37 +91,22 @@ font-size:18px;
 <body>
 
 <header>
-<div class="logo">
-🏠 House Concept Projekt
-</div>
-<div>TimeBuild Pro</div>
+<img src="logo.png" alt="House Concept">
+<b>TimeBuild Pro</b>
 </header>
 
 <div class="container">
 
 <div class="stats">
-<div class="stat-card">
-<h3>Łączne godziny</h3>
-<p id="totalHours">0 h</p>
-</div>
-<div class="stat-card">
-<h3>Koszt robocizny</h3>
-<p id="totalCost">0 zł</p>
-</div>
-<div class="stat-card">
-<h3>Projekty</h3>
-<p id="projectCount">0</p>
-</div>
-<div class="stat-card">
-<h3>Pracownicy</h3>
-<p id="workerCount">0</p>
-</div>
+<div class="stat"><h4>Godziny łącznie</h4><b id="totalH">0h</b></div>
+<div class="stat"><h4>Koszt robocizny</h4><b id="totalC">0 zł</b></div>
+<div class="stat"><h4>Projekty</h4><b id="projCount">0</b></div>
+<div class="stat"><h4>Pracownicy</h4><b id="workCount">0</b></div>
 </div>
 
 <div class="grid">
 
 <div>
-
 <div class="card">
 <h3>Projekty</h3>
 <input id="newProject" placeholder="Nazwa projektu">
@@ -180,29 +120,31 @@ font-size:18px;
 <button onclick="addWorker()">Dodaj pracownika</button>
 <div id="workerList"></div>
 </div>
-
 </div>
 
 <div>
-
 <div class="card">
-<h3>Dodaj godziny (hurtowo)</h3>
-<input type="number" id="bulkHours" placeholder="Godziny">
+<div class="calendar">
+<button onclick="prevWeek()">⬅</button>
+<b id="weekLabel"></b>
+<button onclick="nextWeek()">➡</button>
+</div>
+
+<input type="number" id="bulkHours" placeholder="Godziny dla wszystkich">
 <select id="bulkProject"></select>
 <button onclick="addBulk()">Dodaj wszystkim</button>
 </div>
 
 <div class="card">
-<h3>Dodaj godziny (indywidualnie)</h3>
 <select id="singleWorker"></select>
 <input type="number" id="singleHours" placeholder="Godziny">
 <select id="singleProject"></select>
-<button onclick="addSingle()">Dodaj pracownikowi</button>
+<button onclick="addSingle()">Dodaj indywidualnie</button>
 </div>
 
 <div class="card">
 <h3>Obecność</h3>
-<div id="attendanceList"></div>
+<div id="attendance"></div>
 </div>
 
 <div class="card">
@@ -210,120 +152,126 @@ font-size:18px;
 <div id="summary"></div>
 <div class="total" id="totalPay"></div>
 </div>
-
 </div>
 
 </div>
-
 </div>
 
 <script>
-
 let workers = JSON.parse(localStorage.getItem("workers")) || [];
 let projects = JSON.parse(localStorage.getItem("projects")) || [];
+let entries = JSON.parse(localStorage.getItem("entries")) || {};
+
+let weekOffset=0;
 
 function save(){
 localStorage.setItem("workers",JSON.stringify(workers));
 localStorage.setItem("projects",JSON.stringify(projects));
+localStorage.setItem("entries",JSON.stringify(entries));
 }
 
+function weekKey(){
+let d=new Date();
+d.setDate(d.getDate()+weekOffset*7);
+let y=d.getFullYear();
+let w=Math.ceil((((d - new Date(y,0,1)) / 86400000) + new Date(y,0,1).getDay()+1)/7);
+return y+"-W"+w;
+}
+
+function updateWeek(){
+weekLabel.textContent="Tydzień "+weekKey();
+render();
+}
+
+function prevWeek(){weekOffset--;updateWeek()}
+function nextWeek(){weekOffset++;updateWeek()}
+
 function addWorker(){
-if(!newWorker.value.trim()) return;
-workers.push({name:newWorker.value,hours:0,rate:25,absent:false});
+workers.push({name:newWorker.value,rate:25,absent:false});
 newWorker.value="";
 save();render();
 }
 
-function removeWorker(i){
-workers.splice(i,1);
-save();render();
-}
-
 function addProject(){
-if(!newProject.value.trim()) return;
 projects.push(newProject.value);
 newProject.value="";
 save();render();
 }
 
 function addBulk(){
-let h=Number(bulkHours.value);
-if(!h) return;
-workers.forEach(w=>{if(!w.absent) w.hours+=h});
+let k=weekKey();
+entries[k]=entries[k]||{};
+workers.forEach(w=>{
+if(!w.absent){
+entries[k][w.name]=(entries[k][w.name]||0)+Number(bulkHours.value);
+}
+});
 bulkHours.value="";
 save();render();
 }
 
 function addSingle(){
-let i=singleWorker.value;
-let h=Number(singleHours.value);
-if(!h) return;
-workers[i].hours+=h;
+let k=weekKey();
+let name=workers[singleWorker.value].name;
+entries[k]=entries[k]||{};
+entries[k][name]=(entries[k][name]||0)+Number(singleHours.value);
 singleHours.value="";
 save();render();
 }
 
-function toggleAttendance(i){
+function toggle(i){
 workers[i].absent=!workers[i].absent;
 save();render();
 }
 
 function render(){
-
 projectList.innerHTML="";
 workerList.innerHTML="";
-attendanceList.innerHTML="";
+attendance.innerHTML="";
 summary.innerHTML="";
 bulkProject.innerHTML="";
 singleProject.innerHTML="";
 singleWorker.innerHTML="";
 
-let totalH=0;
-let totalC=0;
-
 projects.forEach(p=>{
-projectList.innerHTML+=`<div class="worker">${p}</div>`;
+projectList.innerHTML+=`<div class="row">${p}</div>`;
 bulkProject.innerHTML+=`<option>${p}</option>`;
 singleProject.innerHTML+=`<option>${p}</option>`;
 });
 
-workers.forEach((w,i)=>{
-workerList.innerHTML+=`
-<div class="worker">${w.name}
-<button class="small-btn" onclick="removeWorker(${i})">Usuń</button>
-</div>`;
+let totalH=0,totalC=0;
+let k=weekKey();
+entries[k]=entries[k]||{};
 
+workers.forEach((w,i)=>{
+workerList.innerHTML+=`<div class="row">${w.name}</div>`;
 singleWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
 
-attendanceList.innerHTML+=`
-<div class="worker">
-${w.name}
-<span class="toggle ${w.absent?'absent':'present'}"
-onclick="toggleAttendance(${i})">
-${w.absent?'NIEOBECNY':'OBECNY'}
-</span>
-</div>`;
+attendance.innerHTML+=`
+<div class="row">${w.name}
+<span class="badge ${w.absent?'off':'on'}" onclick="toggle(${i})">
+${w.absent?'NIE':'TAK'}
+</span></div>`;
 
-let cost=w.hours*w.rate;
-totalH+=w.hours;
-totalC+=cost;
+let h=entries[k][w.name]||0;
+let c=h*w.rate;
+totalH+=h;
+totalC+=c;
 
-summary.innerHTML+=`
-<div class="worker">
-${w.name}
-<span>${w.hours}h → ${cost} zł</span>
-</div>`;
+summary.innerHTML+=`<div class="row">${w.name}<span>${h}h → ${c} zł</span></div>`;
 });
 
-totalHours.textContent=totalH+" h";
-totalCost.textContent=totalC+" zł";
-projectCount.textContent=projects.length;
-workerCount.textContent=workers.length;
-totalPay.textContent="RAZEM DO WYPŁATY: "+totalC+" zł";
-
+totalH_el.textContent=totalH+"h";
+totalC_el.textContent=totalC+" zł";
+projCount.textContent=projects.length;
+workCount.textContent=workers.length;
+totalPay.textContent="RAZEM: "+totalC+" zł";
 }
 
-render();
+const totalH_el=document.getElementById("totalH");
+const totalC_el=document.getElementById("totalC");
+
+updateWeek();
 </script>
 
 </body>
