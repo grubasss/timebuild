@@ -2,16 +2,16 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
 <title>House Concept — TimeBuild Pro</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
 
 <style>
 :root{
 --green:#6FAF8E;
 --dark:#2F3A3F;
---bg:#F3F6F5;
---card:#ffffff;
---border:#E5E7EB;
+--bg:#F4F7F6;
+--card:#FFFFFF;
+--soft:#E5E7EB;
 }
 
 body{
@@ -23,77 +23,62 @@ background:var(--bg);
 header{
 background:linear-gradient(90deg,var(--green),var(--dark));
 color:white;
-padding:16px;
+padding:14px 18px;
 display:flex;
 align-items:center;
-gap:14px;
+gap:12px;
 }
 
-header img{height:44px}
+header img{
+height:42px;
+}
 
 .container{
-max-width:1200px;
+max-width:1000px;
 margin:auto;
-padding:20px;
+padding:16px;
 }
 
 .stats{
 display:grid;
-grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
-gap:16px;
-margin-bottom:20px;
+grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
+gap:14px;
+margin-bottom:18px;
 }
 
-.stat{
+.stat-card{
 background:var(--card);
-padding:16px;
-border-radius:18px;
-box-shadow:0 8px 20px rgba(0,0,0,.05);
+padding:14px;
+border-radius:16px;
+box-shadow:0 6px 18px rgba(0,0,0,.05);
 }
 
-.stat h4{margin:0;color:#555;font-size:14px}
-.stat b{font-size:22px}
+.stat-card h4{
+margin:0;
+font-size:14px;
+color:#555;
+}
 
-.grid{
-display:grid;
-grid-template-columns:2fr 1fr;
-gap:20px;
+.stat-card b{
+font-size:20px;
 }
 
 .card{
 background:var(--card);
-padding:18px;
-border-radius:18px;
-box-shadow:0 10px 25px rgba(0,0,0,.05);
-margin-bottom:20px;
+padding:16px;
+border-radius:16px;
+margin-bottom:16px;
+box-shadow:0 8px 20px rgba(0,0,0,.06);
 }
 
-.project{
-padding:12px 0;
-border-bottom:1px solid var(--border);
-}
-
-.project:last-child{border:none}
-
-.progress{
-height:8px;
-background:#ddd;
-border-radius:8px;
-margin-top:6px;
-overflow:hidden;
-}
-
-.progress div{
-height:100%;
-background:var(--green);
-}
+h3{margin-top:0}
 
 input,select,button{
 width:100%;
 padding:12px;
 margin:6px 0;
 border-radius:12px;
-border:1px solid var(--border);
+border:1px solid var(--soft);
 font-size:15px;
 }
 
@@ -102,17 +87,23 @@ background:var(--green);
 color:white;
 border:none;
 font-weight:600;
-cursor:pointer;
+}
+
+.project{
+display:flex;
+justify-content:space-between;
+padding:8px 0;
+border-bottom:1px solid var(--soft);
 }
 
 .worker{
-border-bottom:1px solid var(--border);
+border-bottom:1px solid var(--soft);
 padding:8px 0;
 }
 
 .total{
 font-weight:700;
-margin-top:10px;
+margin-top:8px;
 font-size:18px;
 }
 </style>
@@ -128,44 +119,117 @@ font-size:18px;
 <div class="container">
 
 <div class="stats">
-<div class="stat">
-<h4>Godziny łącznie</h4>
+<div class="stat-card">
+<h4>Godziny</h4>
 <b id="totalHours">0h</b>
 </div>
-<div class="stat">
+<div class="stat-card">
 <h4>Koszt robocizny</h4>
 <b id="totalCost">0 zł</b>
 </div>
-<div class="stat">
-<h4>Aktywne projekty</h4>
+<div class="stat-card">
+<h4>Projekty</h4>
 <b id="projectCount">0</b>
 </div>
-<div class="stat">
-<h4>Pracownicy</h4>
-<b>3</b>
-</div>
 </div>
 
-<div class="grid">
-
-<div>
 <div class="card">
-<h3>🏗 Projekty</h3>
+<h3>📁 Projekty</h3>
 <input id="newProject" placeholder="Nazwa projektu">
 <button onclick="addProject()">Dodaj projekt</button>
 <div id="projectList"></div>
 </div>
-</div>
 
-<div>
 <div class="card">
-<h3>📅 Dodaj godziny</h3>
+<h3>📅 Godziny</h3>
 <input type="number" id="hours" placeholder="Godziny dla wszystkich">
 <select id="projectSelect"></select>
-<button onclick="addHours()">Zapisz</button>
+<button onclick="addHours()">Dodaj godziny</button>
 </div>
 
 <div class="card">
-<h3>💰 Zaliczka (wszyscy)</h3>
+<h3>💰 Zaliczki (wszyscy)</h3>
 <input type="number" id="advanceAll" placeholder="Kwota">
-<button onclick
+<button onclick="addAdvanceAll()">Dodaj wszystkim</button>
+</div>
+
+<div class="card">
+<h3>📊 Podsumowanie</h3>
+<div id="summary"></div>
+</div>
+
+</div>
+
+<script>
+let projects = JSON.parse(localStorage.getItem("projects")) || ["Dom Wola"];
+let workers = JSON.parse(localStorage.getItem("workers")) || [
+{name:"Łukasz Nowak",rate:25,hours:0,adv:0},
+{name:"Ariel Walczak",rate:25,hours:0,adv:0},
+{name:"Daniel Daniel",rate:25,hours:0,adv:0}
+];
+
+function save(){
+localStorage.setItem("projects",JSON.stringify(projects));
+localStorage.setItem("workers",JSON.stringify(workers));
+}
+
+function addProject(){
+if(!newProject.value) return;
+projects.push(newProject.value);
+newProject.value="";
+save();
+render();
+}
+
+function addHours(){
+let h=Number(hours.value);
+if(!h) return;
+workers.forEach(w=>w.hours+=h);
+save();
+render();
+}
+
+function addAdvanceAll(){
+let a=Number(advanceAll.value);
+if(!a) return;
+workers.forEach(w=>w.adv+=a);
+advanceAll.value="";
+save();
+render();
+}
+
+function render(){
+projectSelect.innerHTML="";
+projectList.innerHTML="";
+summary.innerHTML="";
+let totalH=0;
+let totalC=0;
+
+projects.forEach(p=>{
+projectSelect.innerHTML+=`<option>${p}</option>`;
+projectList.innerHTML+=`<div class="project">${p}</div>`;
+});
+
+workers.forEach(w=>{
+let pay=w.hours*w.rate-w.adv;
+totalH+=w.hours;
+totalC+=pay;
+summary.innerHTML+=`
+<div class="worker">
+<b>${w.name}</b><br>
+Godziny: ${w.hours}h<br>
+Zaliczki: ${w.adv} zł<br>
+Do wypłaty: <b>${pay} zł</b>
+</div>`;
+});
+
+totalHours.textContent=totalH+"h";
+totalCost.textContent=totalC+" zł";
+projectCount.textContent=projects.length;
+}
+
+render();
+</script>
+
+</body>
+</html>
