@@ -5,112 +5,178 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>TimeBuild Pro</title>
 
-<link rel="manifest" href="manifest.json">
-
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
-
 <style>
-body{font-family:system-ui;background:#f4f6f5;margin:0}
-header{background:#2f4f4f;color:white;padding:12px;text-align:center}
-.container{max-width:1200px;margin:auto;padding:12px}
-.card{background:white;padding:12px;border-radius:12px;margin-bottom:12px}
-button{padding:8px;border-radius:8px;border:none;background:#6faf8e;color:white}
-input,select{padding:8px;border-radius:8px;width:100%;margin:4px 0}
-canvas{max-width:100%}
+body{margin:0;font-family:system-ui;background:#f4f6f5}
+header{background:#2f4f4f;color:white;padding:14px;text-align:center;font-size:18px}
+.container{max-width:1200px;margin:auto;padding:14px}
+.calendar-header,.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.calendar-header div{text-align:center;font-weight:600}
+.day{background:white;border-radius:12px;padding:8px;min-height:80px;cursor:pointer;box-shadow:0 4px 12px rgba(0,0,0,.05)}
+.day.active{outline:3px solid #6faf8e}
+.card{background:white;padding:14px;border-radius:14px;margin-top:12px}
+input,select,button{width:100%;padding:10px;border-radius:8px;border:1px solid #ddd;margin-top:6px}
+button{background:#6faf8e;color:white;border:none;font-weight:600}
+.row{display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid #eee}
+.small{width:80px}
+.nav{display:flex;justify-content:space-between;align-items:center;margin-bottom:8px}
 </style>
 </head>
 
 <body>
-<header>House Concept – TimeBuild Pro</header>
+
+<header>TimeBuild Pro</header>
 
 <div class="container">
 
+<div class="nav">
+<button onclick="prevMonth()">⬅</button>
+<h3 id="monthLabel"></h3>
+<button onclick="nextMonth()">➡</button>
+</div>
+
+<div class="calendar-header">
+<div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div>
+</div>
+
+<div class="calendar" id="calendar"></div>
+
 <div class="card">
-<button onclick="exportBackup()">📦 Backup danych</button>
-<input type="file" onchange="importBackup(this)">
-<button onclick="exportExcel()">📤 Excel</button>
+<h3>Wpis dnia</h3>
+<select id="worker"></select>
+<select id="project"></select>
+<input type="number" id="hours" placeholder="Godziny">
+<button onclick="addEntry()">Dodaj</button>
+<div id="dayList"></div>
 </div>
 
 <div class="card">
-<canvas id="projectChart"></canvas>
+<h3>Pracownicy</h3>
+<input id="newWorker" placeholder="Imię i nazwisko">
+<input id="newRate" type="number" placeholder="Stawka zł/h">
+<button onclick="addWorker()">Dodaj</button>
+<div id="workerManage"></div>
 </div>
 
 <div class="card">
-<canvas id="workerChart"></canvas>
+<h3>Projekty</h3>
+<input id="newProject" placeholder="Nazwa projektu">
+<button onclick="addProject()">Dodaj</button>
+<div id="projectManage"></div>
 </div>
 
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("timebuild")) || {
+let data = JSON.parse(localStorage.getItem("tb")) || {
 workers:[],
 projects:[],
 entries:{}
 };
 
-function save(){localStorage.setItem("timebuild",JSON.stringify(data))}
+let current=new Date();
+let selected=null;
 
-// ===== BACKUP =====
-function exportBackup(){
-const blob=new Blob([JSON.stringify(data)],{type:"application/json"});
-const a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="backup.json";
-a.click();
+const days=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
+
+function save(){localStorage.setItem("tb",JSON.stringify(data))}
+function key(d){return d.toISOString().slice(0,10)}
+
+function renderCalendar(){
+calendar.innerHTML="";
+monthLabel.textContent=current.toLocaleString("pl",{month:"long",year:"numeric"});
+
+let first=new Date(current.getFullYear(),current.getMonth(),1);
+let start=(first.getDay()+6)%7;
+let daysInMonth=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
+
+for(let i=0;i<start;i++)calendar.innerHTML+="<div></div>";
+
+for(let d=1;d<=daysInMonth;d++){
+let date=new Date(current.getFullYear(),current.getMonth(),d);
+let k=key(date);
+let sum=(data.entries[k]||[]).reduce((a,b)=>a+b.h,0);
+
+let el=document.createElement("div");
+el.className="day"+(selected===k?" active":"");
+el.innerHTML=`<b>${d}</b><br>${sum}h`;
+el.onclick=()=>{selected=k;renderCalendar();renderDay()};
+calendar.appendChild(el);
+}
 }
 
-function importBackup(input){
-const r=new FileReader();
-r.onload=()=>{data=JSON.parse(r.result);save();location.reload()};
-r.readAsText(input.files[0]);
-}
-
-// ===== EXCEL =====
-function exportExcel(){
-let wb=XLSX.utils.book_new();
-
-let proj={};
-Object.values(data.entries).flat().forEach(e=>{
-let cost=e.h*data.workers[e.w].rate;
-proj[e.p]=(proj[e.p]||0)+cost;
-});
-
-let ws=XLSX.utils.json_to_sheet(
-Object.entries(proj).map(([p,v])=>({Projekt:p,Kwota:v}))
-);
-
-XLSX.utils.book_append_sheet(wb,ws,"Projekty");
-XLSX.writeFile(wb,"raport.xlsx");
-}
-
-// ===== CHARTS =====
-function drawCharts(){
-let proj={},workers={};
-
-Object.values(data.entries).flat().forEach(e=>{
-let cost=e.h*data.workers[e.w].rate;
-proj[e.p]=(proj[e.p]||0)+cost;
-workers[data.workers[e.w].name]=(workers[data.workers[e.w].name]||0)+cost;
-});
-
-new Chart(projectChart,{
-type:"bar",
-data:{labels:Object.keys(proj),datasets:[{data:Object.values(proj)}]}
-});
-
-new Chart(workerChart,{
-type:"pie",
-data:{labels:Object.keys(workers),datasets:[{data:Object.values(workers)}]}
+function renderDay(){
+dayList.innerHTML="";
+(data.entries[selected]||[]).forEach((e,i)=>{
+dayList.innerHTML+=`
+<div class="row">${data.workers[e.w].name} – ${e.h}h (${e.p})
+<button onclick="removeEntry(${i})">❌</button></div>`;
 });
 }
 
-drawCharts();
-
-// ===== PWA =====
-if("serviceWorker" in navigator){
-navigator.serviceWorker.register("sw.js");
+function addEntry(){
+if(!selected||!hours.value) return;
+data.entries[selected]=data.entries[selected]||[];
+data.entries[selected].push({w:+worker.value,p:project.value,h:+hours.value});
+hours.value="";
+save();renderCalendar();renderDay();
 }
+
+function removeEntry(i){
+data.entries[selected].splice(i,1);
+save();renderCalendar();renderDay();
+}
+
+function addWorker(){
+if(!newWorker.value||!newRate.value) return;
+data.workers.push({name:newWorker.value,rate:+newRate.value});
+newWorker.value="";newRate.value="";
+save();renderAll();
+}
+
+function addProject(){
+if(!newProject.value) return;
+data.projects.push(newProject.value);
+newProject.value="";
+save();renderAll();
+}
+
+function renderManage(){
+workerManage.innerHTML="";
+projectManage.innerHTML="";
+
+data.workers.forEach((w,i)=>{
+workerManage.innerHTML+=`
+<div class="row">${w.name}
+<input class="small" type="number" value="${w.rate}" onchange="data.workers[${i}].rate=this.value;save()">
+<button onclick="data.workers.splice(${i},1);save();renderAll()">❌</button></div>`;
+});
+
+data.projects.forEach((p,i)=>{
+projectManage.innerHTML+=`
+<div class="row">${p}
+<button onclick="data.projects.splice(${i},1);save();renderAll()">❌</button></div>`;
+});
+}
+
+function renderSelectors(){
+worker.innerHTML="";
+project.innerHTML="";
+data.workers.forEach((w,i)=>worker.innerHTML+=`<option value="${i}">${w.name}</option>`);
+data.projects.forEach(p=>project.innerHTML+=`<option>${p}</option>`);
+}
+
+function renderAll(){
+renderCalendar();
+renderDay();
+renderManage();
+renderSelectors();
+}
+
+function prevMonth(){current.setMonth(current.getMonth()-1);renderCalendar()}
+function nextMonth(){current.setMonth(current.getMonth()+1);renderCalendar()}
+
+renderAll();
 </script>
+
 </body>
 </html>
