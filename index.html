@@ -12,8 +12,7 @@
 }
 .dark{--bg:#0f172a;--card:#1e293b;--soft:#24324a;--text:#e5e7eb;--weekend:#3a1f2b}
 body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
-header{display:flex;justify-content:space-between;align-items:center;
-background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
+header{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
 .logo{height:42px;background:white;padding:6px;border-radius:12px}
 .container{max-width:1200px;margin:auto;padding:16px}
 .card{background:var(--card);padding:16px;border-radius:18px;margin:14px 0;box-shadow:0 8px 22px rgba(0,0,0,.12)}
@@ -26,10 +25,9 @@ background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
 .day small{opacity:.6;font-size:12px}
 button,input,select{padding:8px;border-radius:10px;border:1px solid #ccc;margin:4px;width:100%}
 button{background:var(--main);color:white;font-weight:700;border:none}
-.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--soft);padding:6px 0;gap:6px}
+.row{display:flex;justify-content:space-between;border-bottom:1px solid var(--soft);padding:6px 0}
 .small{width:90px}
 .remove{color:var(--danger);font-weight:800;cursor:pointer}
-.low{color:var(--danger);font-weight:800}
 #lock{position:fixed;inset:0;background:#0f172a;color:white;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999}
 </style>
 </head>
@@ -54,10 +52,9 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 
 <div class="card">
 <b>Statystyki</b>
-<div>Dziś: <span id="todayStat">0</span> zł</div>
-<div>Tydzień: <span id="weekStat">0</span> zł</div>
-<div>Miesiąc: <span id="monthStat">0</span> zł</div>
-<div>Zysk: <span id="profitStat">0</span> zł</div>
+<div>Zarobione: <span id="earnedStat">0</span> zł</div>
+<div>Zaliczki: <span id="advanceStat">0</span> zł</div>
+<div><b>Do wypłaty: <span id="toPayStat">0</span> zł</b></div>
 </div>
 
 <div class="card">
@@ -70,15 +67,9 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 </div>
 
 <div class="card">
-<h3>💾 Backup danych</h3>
+<h3>💾 Backup</h3>
 <button onclick="manualBackup()">Pobierz backup</button>
 <input type="file" onchange="restore(this)">
-<select id="backupMode">
-<option value="daily">Codziennie</option>
-<option value="weekly">Co tydzień</option>
-</select>
-<input id="backupHour" type="number" placeholder="Godzina (0–23)">
-<button onclick="saveBackupSettings()">Zapisz harmonogram</button>
 </div>
 
 <div class="card">
@@ -117,7 +108,7 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 </div>
 
 <div class="card">
-<h3>📊 Wypłaty</h3>
+<h3>📊 Rozliczenia</h3>
 <div id="payouts"></div>
 </div>
 
@@ -130,29 +121,17 @@ let db=JSON.parse(localStorage.getItem("ERP_COMPLETE_PLUS"))||{
 workers:[],projects:[],entries:[],advances:[]
 };
 
-let settings=JSON.parse(localStorage.getItem("BACKUP_SETTINGS"))||{
-mode:"daily",hour:2,last:null
-};
-
 const save=()=>localStorage.setItem("ERP_COMPLETE_PLUS",JSON.stringify(db));
 const uid=()=>crypto.randomUUID();
+
+let cur=new Date(),selected=null;
+const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const dayNames=["Nd","Pn","Wt","Śr","Cz","Pt","Sb"];
+
 const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
 
-const dayNames=["Nd","Pn","Wt","Śr","Cz","Pt","Sb"];
-let cur=new Date(),selected=null;
-
-const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-
-function login(){
-if(pin.value===PIN) lock.style.display="none";
-else alert("Zły PIN");
-}
-
-function toggleDark(){
-document.body.classList.toggle("dark");
-localStorage.setItem("dark",document.body.classList.contains("dark"));
-}
-if(localStorage.getItem("dark")==="true") document.body.classList.add("dark");
+function login(){if(pin.value===PIN) lock.style.display="none"; else alert("Zły PIN");}
+function toggleDark(){document.body.classList.toggle("dark");localStorage.setItem("dark",document.body.classList.contains("dark"))}
 
 function moveMonth(n){cur.setMonth(cur.getMonth()+n);render();}
 function selectDay(k){selected=k;render();}
@@ -162,15 +141,12 @@ calendar.innerHTML="";
 monthLabel.textContent=cur.toLocaleDateString("pl",{month:"long",year:"numeric"});
 let y=cur.getFullYear(),m=cur.getMonth();
 let days=new Date(y,m+1,0).getDate();
-let today=key(new Date());
-
 for(let i=1;i<=days;i++){
 let d=new Date(y,m,i),k=key(d);
 let has=db.entries.some(e=>e.date===k);
 let weekend=d.getDay()==0||d.getDay()==6;
-
 calendar.innerHTML+=`
-<div class="day ${weekend?'weekend':''} ${k===today?'today':''} ${k===selected?'active':''}"
+<div class="day ${weekend?'weekend':''} ${k===key(new Date())?'today':''} ${k===selected?'active':''}"
 onclick="selectDay('${k}')">
 ${i}<br><small>${dayNames[d.getDay()]}</small>
 ${has?'<div class="dot"></div>':''}
@@ -180,7 +156,6 @@ ${has?'<div class="dot"></div>':''}
 
 function addWorker(){db.workers.push({id:uid(),name:wName.value,rate:+wRate.value});wName.value=wRate.value="";save();render();}
 function addProject(){db.projects.push({id:uid(),name:pName.value});pName.value="";save();render();}
-
 function addEntry(){if(!selected)return;db.entries.push({id:uid(),date:selected,worker:entryWorker.value,project:entryProject.value,hours:+entryHours.value});entryHours.value="";save();render();}
 function addEntryAll(){if(!selected||!entryHours.value)return;db.workers.forEach(w=>db.entries.push({id:uid(),date:selected,worker:w.id,project:entryProject.value,hours:+entryHours.value}));entryHours.value="";save();render();}
 function addAdvance(){db.advances.push({id:uid(),worker:advWorker.value,date:key(new Date()),amount:+advAmount.value});advAmount.value="";save();render();}
@@ -211,11 +186,19 @@ let w=db.workers.find(x=>x.id===a.worker);
 advances.innerHTML+=`<div class="row">${w?.name} ${a.amount} zł</div>`;
 });
 
+let totalEarned=0,totalAdv=0;
+
 db.workers.forEach(w=>{
 let earned=db.entries.filter(e=>e.worker===w.id).reduce((s,e)=>s+e.hours*w.rate,0);
 let adv=db.advances.filter(a=>a.worker===w.id).reduce((s,a)=>s+a.amount,0);
-payouts.innerHTML+=`<div class="row">${w.name} → ${earned-adv} zł</div>`;
+totalEarned+=earned;
+totalAdv+=adv;
+payouts.innerHTML+=`<div class="row">${w.name}: ${earned-adv} zł</div>`;
 });
+
+earnedStat.textContent=totalEarned;
+advanceStat.textContent=totalAdv;
+toPayStat.textContent=totalEarned-totalAdv;
 }
 
 function manualBackup(){
@@ -228,31 +211,10 @@ a.click();
 
 function restore(input){
 const r=new FileReader();
-r.onload=e=>{db=JSON.parse(e.target.result);save();render();}
+r.onload=e=>{db=JSON.parse(e.target.result);save();render()}
 r.readAsText(input.files[0]);
 }
 
-function saveBackupSettings(){
-settings.mode=backupMode.value;
-settings.hour=+backupHour.value;
-localStorage.setItem("BACKUP_SETTINGS",JSON.stringify(settings));
-}
-
-function autoBackupCheck(){
-let now=new Date();
-if(now.getHours()!==settings.hour) return;
-
-let today=now.toDateString();
-if(settings.last===today) return;
-
-if(settings.mode==="daily" || (settings.mode==="weekly" && now.getDay()===1)){
-manualBackup();
-settings.last=today;
-localStorage.setItem("BACKUP_SETTINGS",JSON.stringify(settings));
-}
-}
-
-setInterval(autoBackupCheck,60000);
 render();
 </script>
 </body>
