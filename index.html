@@ -2,67 +2,27 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TimeBuild PRO+ ERP</title>
+<title>TimeBuild ERP 2.0</title>
 
 <style>
 body{margin:0;font-family:system-ui;background:#f3f4f6}
-header{background:#0f172a;color:white;padding:18px;font-size:22px}
-.container{max-width:1400px;margin:auto;padding:16px}
-.card{background:white;padding:18px;border-radius:16px;margin:16px 0;
-box-shadow:0 6px 16px rgba(0,0,0,.08)}
+header{background:#0f172a;color:white;padding:16px;font-size:22px}
+.container{max-width:1300px;margin:auto;padding:16px}
+.card{background:white;padding:16px;border-radius:14px;margin:14px 0;box-shadow:0 4px 12px rgba(0,0,0,.08)}
 
-.nav{
-display:flex;
-justify-content:space-between;
-align-items:center;
-margin-bottom:10px
-}
-
-.calendar{
-display:grid;
-grid-template-columns:60px repeat(7,1fr);
-gap:6px
-}
-
-.week{font-weight:700;text-align:center;color:#666}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .weekday{font-weight:700;text-align:center}
-
-.day{
-background:white;
-padding:12px;
-border-radius:12px;
-text-align:center;
-cursor:pointer;
-border:1px solid #eee
-}
-
+.day{background:white;border-radius:12px;padding:10px;text-align:center;cursor:pointer}
 .day.today{background:#dcfce7;font-weight:700}
 .day.active{outline:3px solid #6faf8e}
-.day.other{opacity:.35}
+.day.empty{background:transparent}
 
-.row{
-display:flex;
-justify-content:space-between;
-align-items:center;
-border-bottom:1px solid #eee;
-padding:6px
-}
+.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:6px}
 
 button,input,select{
-padding:8px;
-border-radius:10px;
-border:1px solid #ddd;
-margin:4px;
-width:100%
+padding:8px;border-radius:10px;border:1px solid #ddd;width:100%;margin:4px
 }
-
-button{
-background:#6faf8e;
-color:white;
-border:none;
-font-weight:600
-}
+button{background:#6faf8e;color:white;border:none;font-weight:600}
 
 .flex{display:flex;gap:6px;flex-wrap:wrap}
 .small{width:90px}
@@ -72,161 +32,233 @@ font-weight:600
 </head>
 
 <body>
-<header>TimeBuild PRO+ ERP</header>
+<header>TimeBuild ERP 2.0 – silnik PRO</header>
 <div class="container">
 
-<div class="card nav">
-<button onclick="prevMonth()">◀</button>
-<b id="label"></b>
-<button onclick="nextMonth()">▶</button>
+<div class="card flex">
+<div>Dziś: <span id="todaySum" class="stat">0</span> zł</div>
+<div>Tydzień: <span id="weekSum" class="stat">0</span> zł</div>
+<div>Miesiąc: <span id="monthSum" class="stat">0</span> zł</div>
+<div>Do wypłaty: <span id="paySum" class="stat">0</span> zł</div>
 </div>
 
 <div class="card">
-<div id="calendar" class="calendar"></div>
+<div id="weekdays" class="grid"></div>
+<div id="calendar" class="grid"></div>
 </div>
 
 <div class="card">
-<select id="worker"></select>
-<select id="project"></select>
+<select id="workerSel"></select>
+<select id="projectSel"></select>
 <input id="hours" type="number" placeholder="Godziny">
-<div class="flex">
-<button onclick="addEntry(false)">Jednemu</button>
-<button onclick="addEntry(true)">Wszystkim</button>
+<button onclick="addEntry()">Dodaj wpis</button>
+<div id="dayEntries"></div>
 </div>
-<div id="dayList"></div>
-<button onclick="deleteDay()" style="background:#dc2626">Usuń dzień</button>
+
+<div class="card">
+<h3>👷 Pracownicy</h3>
+<input id="wName" placeholder="Imię">
+<input id="wRate" type="number" placeholder="Stawka">
+<button onclick="addWorker()">Dodaj</button>
+<div id="workers"></div>
+</div>
+
+<div class="card">
+<h3>📁 Projekty</h3>
+<input id="pName" placeholder="Projekt">
+<button onclick="addProject()">Dodaj</button>
+<div id="projects"></div>
+</div>
+
+<div class="card">
+<h3>💸 Zaliczki</h3>
+<select id="advWorker"></select>
+<input id="advAmount" type="number" placeholder="Kwota">
+<button onclick="addAdvance()">Dodaj</button>
+<div id="advList"></div>
+</div>
+
+<div class="card">
+<h3>📊 Rozliczenia</h3>
+<div id="reports"></div>
 </div>
 
 </div>
 
 <script>
-let db=JSON.parse(localStorage.getItem("TBPRO"))||{
-workers:[],
-projects:[],
-entries:{}
+let db = JSON.parse(localStorage.getItem("ERP2")) || {
+ workers:[],
+ projects:[],
+ entries:[],
+ advances:[]
 };
 
-const save=()=>localStorage.setItem("TBPRO",JSON.stringify(db));
+const save=()=>localStorage.setItem("ERP2",JSON.stringify(db));
+const id=()=>Date.now()+Math.random();
 
-function pad(n){return String(n).padStart(2,"0")}
-function key(d){return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`}
+const days=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
+weekdays.innerHTML=days.map(d=>`<div class="weekday">${d}</div>`).join("");
 
 let current=new Date();
-let selected=null;
+let selectedDate=null;
 
-const weekdays=["","Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
-
-function getWeekNumber(date){
-let d=new Date(Date.UTC(date.getFullYear(),date.getMonth(),date.getDate()));
-let day=d.getUTCDay()||7;
-d.setUTCDate(d.getUTCDate()+4-day);
-let yearStart=new Date(Date.UTC(d.getUTCFullYear(),0,1));
-return Math.ceil((((d-yearStart)/86400000)+1)/7);
+function dateKey(d){
+return new Date(d.getFullYear(),d.getMonth(),d.getDate()).toISOString().slice(0,10);
 }
 
 function buildCalendar(){
-
-const cal=document.getElementById("calendar");
-cal.innerHTML="";
-
-document.getElementById("label").textContent=
-current.toLocaleDateString("pl-PL",{month:"long",year:"numeric"});
-
-weekdays.forEach(d=>{
-cal.innerHTML+=`<div class="weekday">${d}</div>`;
-});
-
-let y=current.getFullYear();
-let m=current.getMonth();
-
+calendar.innerHTML="";
+let y=current.getFullYear(),m=current.getMonth();
 let first=new Date(y,m,1);
 let start=(first.getDay()+6)%7;
-let startDate=new Date(y,m,1-start);
+let daysInMonth=new Date(y,m+1,0).getDate();
+let todayKey=dateKey(new Date());
 
-for(let w=0;w<6;w++){
+for(let i=0;i<start;i++) calendar.innerHTML+=`<div class="day empty"></div>`;
 
-let weekDate=new Date(startDate);
-weekDate.setDate(startDate.getDate()+w*7);
+for(let i=1;i<=daysInMonth;i++){
+let d=new Date(y,m,i);
+let k=dateKey(d);
+let sum=db.entries.filter(e=>e.date===k)
+ .reduce((s,e)=>s+e.hours*getRate(e.workerId),0);
 
-cal.innerHTML+=`<div class="week">T${getWeekNumber(weekDate)}</div>`;
-
-for(let i=0;i<7;i++){
-
-let d=new Date(weekDate);
-d.setDate(weekDate.getDate()+i);
-
-let k=key(d);
-let sum=(db.entries[k]||[]).reduce((a,b)=>a+b.h,0);
-
-let cls="day";
-if(d.getMonth()!==m) cls+=" other";
-if(k===key(new Date())) cls+=" today";
-if(k===selected) cls+=" active";
-
-cal.innerHTML+=`
-<div class="${cls}" onclick="selectDay('${k}')">
-${d.getDate()}<br>${sum||""}
-</div>`;
-}
+let cls="day"+(k===todayKey?" today":"")+(k===selectedDate?" active":"");
+calendar.innerHTML+=`<div class="${cls}" onclick="selectDay('${k}')">${i}<br>${sum||""}</div>`;
 }
 }
 
-function selectDay(k){selected=k;render();}
+function selectDay(k){selectedDate=k;render();}
 
-function prevMonth(){current.setMonth(current.getMonth()-1);buildCalendar();}
-function nextMonth(){current.setMonth(current.getMonth()+1);buildCalendar();}
+const getRate=id=>db.workers.find(w=>w.id===id)?.rate||0;
 
-function addEntry(all){
-if(!selected||!hours.value) return;
-db.entries[selected]=db.entries[selected]||[];
+function addWorker(){
+db.workers.push({id:id(),name:wName.value,rate:+wRate.value});
+wName.value="";wRate.value="";
+save();render();
+}
 
-if(all){
-db.workers.forEach((_,i)=>{
-db.entries[selected].push({w:i,p:project.value,h:+hours.value});
+function addProject(){
+db.projects.push({id:id(),name:pName.value});
+pName.value="";
+save();render();
+}
+
+function addEntry(){
+if(!selectedDate||!hours.value) return;
+db.entries.push({
+id:id(),
+date:selectedDate,
+workerId:workerSel.value,
+projectId:projectSel.value,
+hours:+hours.value
 });
-}else{
-db.entries[selected].push({w:+worker.value,p:project.value,h:+hours.value});
-}
-
 hours.value="";
-save();
-render();
+save();render();
 }
 
-function deleteDay(){
-delete db.entries[selected];
-save();
-render();
+function addAdvance(){
+db.advances.push({
+id:id(),
+workerId:advWorker.value,
+date:new Date().toISOString(),
+amount:+advAmount.value
+});
+advAmount.value="";
+save();render();
 }
 
 function render(){
 buildCalendar();
 
-worker.innerHTML="";
-project.innerHTML="";
-dayList.innerHTML="";
+workerSel.innerHTML="";
+projectSel.innerHTML="";
+advWorker.innerHTML="";
+workers.innerHTML="";
+projects.innerHTML="";
+dayEntries.innerHTML="";
+advList.innerHTML="";
+reports.innerHTML="";
 
-db.workers.forEach((w,i)=>{
-worker.innerHTML+=`<option value="${i}">${w.name}</option>`;
+db.workers.forEach(w=>{
+workerSel.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+advWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+
+workers.innerHTML+=`
+<div class="row">
+<input value="${w.name}" onchange="w.name=this.value;save()">
+<input class="small" value="${w.rate}" onchange="w.rate=+this.value;save()">
+<span class="remove" onclick="db.workers=db.workers.filter(x=>x.id!=='${w.id}');save();render()">✖</span>
+</div>`;
 });
 
 db.projects.forEach(p=>{
-project.innerHTML+=`<option>${p}</option>`;
-});
-
-(db.entries[selected]||[]).forEach((e,i)=>{
-dayList.innerHTML+=`
+projectSel.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
+projects.innerHTML+=`
 <div class="row">
-${db.workers[e.w]?.name} – ${e.p}
-<input class="small" value="${e.h}"
-onchange="db.entries[selected][${i}].h=+this.value;save();render()">h
-<span class="remove"
-onclick="db.entries[selected].splice(${i},1);save();render()">✖</span>
+<input value="${p.name}" onchange="p.name=this.value;save()">
+<span class="remove" onclick="db.projects=db.projects.filter(x=>x.id!=='${p.id}');save();render()">✖</span>
 </div>`;
 });
+
+db.entries.filter(e=>e.date===selectedDate).forEach(e=>{
+let w=db.workers.find(x=>x.id===e.workerId);
+let p=db.projects.find(x=>x.id===e.projectId);
+dayEntries.innerHTML+=`
+<div class="row">
+${w?.name} – ${p?.name}
+<input class="small" value="${e.hours}" onchange="e.hours=+this.value;save();render()"> h
+<span class="remove" onclick="db.entries=db.entries.filter(x=>x.id!=='${e.id}');save();render()">✖</span>
+</div>`;
+});
+
+db.advances.forEach(a=>{
+let w=db.workers.find(x=>x.id===a.workerId);
+advList.innerHTML+=`
+<div class="row">
+${w?.name} ${new Date(a.date).toLocaleDateString()}
+<input class="small" value="${a.amount}" onchange="a.amount=+this.value;save();render()">
+<span class="remove" onclick="db.advances=db.advances.filter(x=>x.id!=='${a.id}');save();render()">✖</span>
+</div>`;
+});
+
+let today=dateKey(new Date());
+let weekStart=new Date();weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
+let month=today.slice(0,7);
+
+let todaySum=0,weekSum=0,monthSum=0,paySum=0;
+
+db.entries.forEach(e=>{
+let cost=e.hours*getRate(e.workerId);
+if(e.date===today) todaySum+=cost;
+if(new Date(e.date)>=weekStart) weekSum+=cost;
+if(e.date.startsWith(month)) monthSum+=cost;
+});
+
+db.workers.forEach(w=>{
+let earned=db.entries.filter(e=>e.workerId===w.id)
+ .reduce((s,e)=>s+e.hours*w.rate,0);
+let adv=db.advances.filter(a=>a.workerId===w.id)
+ .reduce((s,a)=>s+a.amount,0);
+let pay=earned-adv;
+paySum+=pay;
+
+reports.innerHTML+=`
+<div class="row">
+${w.name}: ${pay} zł (zaliczki ${adv})
+</div>`;
+});
+
+todaySumEl.textContent=todaySum;
+weekSumEl.textContent=weekSum;
+monthSumEl.textContent=monthSum;
+paySumEl.textContent=paySum;
+
+todaySumEl=document.getElementById("todaySum");
+weekSumEl=document.getElementById("weekSum");
+monthSumEl=document.getElementById("monthSum");
+paySumEl=document.getElementById("paySum");
 }
 
-buildCalendar();
 render();
 </script>
 </body>
