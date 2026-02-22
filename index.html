@@ -3,23 +3,66 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>House Concept ERP PRO MAX</title>
+<title>House Concept ERP COMPLETE+</title>
 
 <style>
-:root{--main:#5fa38c;--bg:#f3f7f6;--card:#fff;--soft:#eaf5f1;--text:#1f2933;--danger:#dc2626}
+:root{
+--main:#5fa38c;--bg:#f3f7f6;--card:#fff;--soft:#eaf5f1;
+--text:#1f2933;--danger:#dc2626;--weekend:#fde2e2;
+}
+.dark{--bg:#0f172a;--card:#1e293b;--soft:#24324a;--text:#e5e7eb;--weekend:#3a1f2b}
 body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
-header{background:#0f172a;color:white;padding:14px;font-weight:800}
+header{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
+.logo{height:42px;background:white;padding:6px;border-radius:12px}
 .container{max-width:1200px;margin:auto;padding:16px}
 .card{background:var(--card);padding:16px;border-radius:18px;margin:14px 0;box-shadow:0 8px 22px rgba(0,0,0,.12)}
-.row{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:6px 0}
-button,input,select{padding:8px;border-radius:10px;border:1px solid #ccc;width:100%;margin:4px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{background:var(--soft);border-radius:14px;padding:8px;text-align:center;font-weight:700;cursor:pointer}
+.day.weekend{background:var(--weekend)}
+.day.today{outline:3px solid #22c55e}
+.day.active{outline:3px solid var(--main)}
+.dot{width:7px;height:7px;background:var(--main);border-radius:50%;margin:4px auto 0}
+.day small{opacity:.6;font-size:12px}
+button,input,select{padding:8px;border-radius:10px;border:1px solid #ccc;margin:4px;width:100%}
 button{background:var(--main);color:white;font-weight:700;border:none}
+.row{display:flex;justify-content:space-between;border-bottom:1px solid var(--soft);padding:6px 0}
+#lock{position:fixed;inset:0;background:#0f172a;color:white;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999}
 </style>
 </head>
 
 <body>
-<header>House Concept ERP PRO MAX</header>
+
+<div id="lock">
+<h2>House Concept ERP</h2>
+<input id="pin" type="password" placeholder="PIN">
+<button onclick="login()">Zaloguj</button>
+</div>
+
+<header>
+<div style="display:flex;gap:12px;align-items:center">
+<img src="6CBB60BF-B078-44B2-A9D7-17BF53C87CAF.png" class="logo">
+<b>House Concept ERP COMPLETE+</b>
+</div>
+<button onclick="toggleDark()">🌙</button>
+</header>
+
 <div class="container">
+
+<div class="card">
+<b>Statystyki globalne</b>
+<div>Zarobione: <span id="earnedStat">0</span> zł</div>
+<div>Zaliczki: <span id="advanceStat">0</span> zł</div>
+<div><b>Do wypłaty: <span id="toPayStat">0</span> zł</b></div>
+</div>
+
+<div class="card">
+<div style="display:flex;justify-content:space-between">
+<button onclick="moveMonth(-1)">◀</button>
+<b id="monthLabel"></b>
+<button onclick="moveMonth(1)">▶</button>
+</div>
+<div id="calendar" class="grid"></div>
+</div>
 
 <div class="card">
 <h3>📊 Raport miesięczny</h3>
@@ -28,96 +71,219 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 </div>
 
 <div class="card">
-<h3>⏰ Przypomnienia wypłat</h3>
+<h3>📈 Analityka</h3>
+<div id="analytics"></div>
+</div>
+
+<div class="card">
+<h3>🔔 Przypomnienia wypłat</h3>
 <select id="remMode">
 <option value="monthly">Co miesiąc</option>
 <option value="weekly">Co tydzień</option>
 </select>
-<input id="remHour" type="number" placeholder="Godzina (0-23)">
+<input id="remHour" type="number" placeholder="Godzina (0–23)">
 <button onclick="saveReminder()">Zapisz</button>
-<div id="remStatus"></div>
+<div id="remInfo"></div>
 </div>
 
 <div class="card">
-<h3>📈 Analityka</h3>
-<div id="analytics"></div>
+<h3>💾 Backup</h3>
+<button onclick="manualBackup()">Pobierz backup</button>
+<input type="file" onchange="restore(this)">
+</div>
+
+<div class="card">
+<h3>👷 Pracownicy</h3>
+<input id="wName" placeholder="Imię">
+<input id="wRate" type="number" placeholder="Stawka">
+<button onclick="addWorker()">Dodaj</button>
+<div id="workers"></div>
+</div>
+
+<div class="card">
+<h3>🏗 Projekty</h3>
+<input id="pName" placeholder="Projekt">
+<button onclick="addProject()">Dodaj</button>
+<div id="projects"></div>
+</div>
+
+<div class="card">
+<h3>⏱ Godziny</h3>
+<select id="entryWorker"></select>
+<select id="entryProject"></select>
+<input id="entryHours" type="number">
+<div style="display:flex;gap:6px">
+<button onclick="addEntry()">Jednemu</button>
+<button onclick="addEntryAll()">Wszystkim</button>
+</div>
+<div id="entries"></div>
+</div>
+
+<div class="card">
+<h3>💰 Zaliczki</h3>
+<select id="advWorker"></select>
+<input id="advAmount" type="number">
+<button onclick="addAdvance()">Dodaj</button>
+<div id="advances"></div>
+</div>
+
+<div class="card">
+<h3>📊 Rozliczenia</h3>
+<div id="payouts"></div>
 </div>
 
 </div>
 
 <script>
+const PIN="1234";
+
 let db=JSON.parse(localStorage.getItem("ERP_COMPLETE_PLUS"))||{
 workers:[],projects:[],entries:[],advances:[]
 };
 
-let reminder=JSON.parse(localStorage.getItem("REMINDER"))||{
-mode:"monthly",hour:17,last:null
-};
+let reminder=JSON.parse(localStorage.getItem("REMINDER"))||{mode:"monthly",hour:17,last:null};
 
-const saveReminder=()=>{
+const save=()=>localStorage.setItem("ERP_COMPLETE_PLUS",JSON.stringify(db));
+const uid=()=>crypto.randomUUID();
+
+let cur=new Date(),selected=null;
+const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const dayNames=["Nd","Pn","Wt","Śr","Cz","Pt","Sb"];
+const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
+
+function login(){if(pin.value===PIN) lock.style.display="none"; else alert("Zły PIN")}
+function toggleDark(){document.body.classList.toggle("dark")}
+
+function moveMonth(n){cur.setMonth(cur.getMonth()+n);render()}
+function selectDay(k){selected=k;render()}
+
+function buildCalendar(){
+calendar.innerHTML="";
+monthLabel.textContent=cur.toLocaleDateString("pl",{month:"long",year:"numeric"});
+let days=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();
+for(let i=1;i<=days;i++){
+let d=new Date(cur.getFullYear(),cur.getMonth(),i),k=key(d);
+calendar.innerHTML+=`
+<div class="day ${(d.getDay()==0||d.getDay()==6)?'weekend':''} ${k===key(new Date())?'today':''} ${k===selected?'active':''}"
+onclick="selectDay('${k}')">
+${i}<br><small>${dayNames[d.getDay()]}</small>
+${db.entries.some(e=>e.date===k)?'<div class="dot"></div>':''}
+</div>`;
+}
+}
+
+function addWorker(){db.workers.push({id:uid(),name:wName.value,rate:+wRate.value});wName.value=wRate.value="";save();render()}
+function addProject(){db.projects.push({id:uid(),name:pName.value});pName.value="";save();render()}
+function addEntry(){if(!selected)return;db.entries.push({id:uid(),date:selected,worker:entryWorker.value,project:entryProject.value,hours:+entryHours.value});entryHours.value="";save();render()}
+function addEntryAll(){if(!selected||!entryHours.value)return;db.workers.forEach(w=>db.entries.push({id:uid(),date:selected,worker:w.id,project:entryProject.value,hours:+entryHours.value}));entryHours.value="";save();render()}
+function addAdvance(){db.advances.push({id:uid(),worker:advWorker.value,date:key(new Date()),amount:+advAmount.value});advAmount.value="";save();render()}
+
+function buildReport(){
+let months=[...new Set(db.entries.map(e=>e.date.slice(0,7)))];
+reportMonth.innerHTML=months.map(m=>`<option>${m}</option>`).join("");
+}
+
+reportMonth.onchange=()=>render();
+
+function analytics(){
+let hours=0,earned=0,adv=0;
+db.entries.forEach(e=>{hours+=e.hours;earned+=e.hours*rate(e.worker)});
+db.advances.forEach(a=>adv+=a.amount);
+analytics.innerHTML=`
+<div>Godziny: ${hours}</div>
+<div>Zarobione: ${earned} zł</div>
+<div>Zaliczki: ${adv} zł</div>
+<b>Do wypłaty: ${earned-adv} zł</b>`;
+}
+
+function checkReminder(){
+let now=new Date();
+if(now.getHours()!=reminder.hour) return;
+let t=now.toDateString();
+if(reminder.last===t) return;
+if(reminder.mode==="weekly" && now.getDay()!=1) return;
+alert("💸 Przypomnienie: wypłaty do sprawdzenia!");
+reminder.last=t;
+localStorage.setItem("REMINDER",JSON.stringify(reminder));
+}
+
+setInterval(checkReminder,60000);
+
+function saveReminder(){
 reminder.mode=remMode.value;
 reminder.hour=+remHour.value;
 localStorage.setItem("REMINDER",JSON.stringify(reminder));
-remStatus.textContent="Zapisano ✔";
-};
-
-function buildMonthList(){
-let set=new Set(db.entries.map(e=>e.date.slice(0,7)));
-reportMonth.innerHTML=[...set].map(m=>`<option>${m}</option>`).join("");
+remInfo.textContent="Zapisano ✔";
 }
 
-function report(){
+function manualBackup(){
+const blob=new Blob([JSON.stringify(db)],{type:"application/json"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);
+a.download="erp-backup.json";
+a.click();
+}
+
+function restore(input){
+const r=new FileReader();
+r.onload=e=>{db=JSON.parse(e.target.result);save();render()}
+r.readAsText(input.files[0]);
+}
+
+function render(){
+buildCalendar();
+buildReport();
+analytics();
+
+workers.innerHTML=projects.innerHTML=entries.innerHTML=advances.innerHTML=payouts.innerHTML="";
+entryWorker.innerHTML=entryProject.innerHTML=advWorker.innerHTML="";
+
+db.workers.forEach(w=>{
+workers.innerHTML+=`<div class="row">${w.name} ${w.rate} zł</div>`;
+entryWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+advWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+});
+
+db.projects.forEach(p=>{
+projects.innerHTML+=`<div class="row">${p.name}</div>`;
+entryProject.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
+});
+
+db.entries.filter(e=>e.date===selected).forEach(e=>{
+entries.innerHTML+=`<div class="row">${db.workers.find(w=>w.id===e.worker)?.name} ${e.hours}h</div>`;
+});
+
+db.advances.forEach(a=>{
+advances.innerHTML+=`<div class="row">${db.workers.find(w=>w.id===a.worker)?.name} ${a.amount} zł</div>`;
+});
+
+let totalEarned=0,totalAdv=0;
+db.workers.forEach(w=>{
+let earned=db.entries.filter(e=>e.worker===w.id).reduce((s,e)=>s+e.hours*w.rate,0);
+let adv=db.advances.filter(a=>a.worker===w.id).reduce((s,a)=>s+a.amount,0);
+totalEarned+=earned; totalAdv+=adv;
+payouts.innerHTML+=`<div class="row">${w.name}: ${earned-adv} zł</div>`;
+});
+
+earnedStat.textContent=totalEarned;
+advanceStat.textContent=totalAdv;
+toPayStat.textContent=totalEarned-totalAdv;
+
 let m=reportMonth.value;
-let html="<div class='row'><b>Pracownik</b><b>Zarobione</b><b>Zaliczki</b><b>Do wypłaty</b></div>";
+if(m){
+let html="<div class='row'><b>Pracownik</b><b>Do wypłaty</b></div>";
 db.workers.forEach(w=>{
 let earned=db.entries.filter(e=>e.worker===w.id && e.date.startsWith(m))
 .reduce((s,e)=>s+e.hours*w.rate,0);
 let adv=db.advances.filter(a=>a.worker===w.id && a.date.startsWith(m))
 .reduce((s,a)=>s+a.amount,0);
-html+=`<div class='row'><span>${w.name}</span><span>${earned}</span><span>${adv}</span><span>${earned-adv}</span></div>`;
+html+=`<div class='row'><span>${w.name}</span><span>${earned-adv}</span></div>`;
 });
 reportTable.innerHTML=html;
 }
-
-reportMonth.onchange=report;
-
-function analytics(){
-let totalEarned=0,totalAdv=0,totalHours=0;
-db.entries.forEach(e=>{
-let w=db.workers.find(x=>x.id===e.worker);
-totalEarned+=e.hours*w.rate;
-totalHours+=e.hours;
-});
-db.advances.forEach(a=>totalAdv+=a.amount);
-
-analytics.innerHTML=`
-<div class="row">Godziny łącznie: ${totalHours}</div>
-<div class="row">Zarobione: ${totalEarned} zł</div>
-<div class="row">Zaliczki: ${totalAdv} zł</div>
-<div class="row"><b>Do wypłaty: ${totalEarned-totalAdv} zł</b></div>
-`;
 }
 
-function reminderCheck(){
-let now=new Date();
-if(now.getHours()!==reminder.hour) return;
-
-let today=now.toDateString();
-if(reminder.last===today) return;
-
-if(reminder.mode==="weekly" && now.getDay()!==1) return;
-
-alert("💸 Przypomnienie: sprawdź wypłaty w ERP");
-
-reminder.last=today;
-localStorage.setItem("REMINDER",JSON.stringify(reminder));
-}
-
-setInterval(reminderCheck,60000);
-
-buildMonthList();
-report();
-analytics();
+render();
 </script>
 </body>
 </html>
