@@ -10,19 +10,44 @@ body{margin:0;font-family:system-ui;background:#f3f4f6}
 header{background:#0f172a;color:white;padding:16px;font-size:22px}
 .container{max-width:1300px;margin:auto;padding:16px}
 .card{background:white;padding:16px;border-radius:14px;margin:14px 0;box-shadow:0 4px 12px rgba(0,0,0,.08)}
+
+.topstats{display:flex;gap:12px;flex-wrap:wrap;font-weight:700}
+
+.calendar-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+.calbtn{background:#e5e7eb;color:#111;padding:6px 14px;border-radius:10px;font-weight:700}
+
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 .weekday{text-align:center;font-weight:700}
-.day{background:white;border-radius:12px;padding:10px;text-align:center;cursor:pointer}
-.day.today{background:#dcfce7;font-weight:700}
+
+.day{
+background:white;border-radius:12px;
+min-height:64px;
+display:flex;flex-direction:column;align-items:center;justify-content:center;
+cursor:pointer;font-weight:600;
+}
+
+.day.today{background:#dcfce7}
 .day.active{outline:3px solid #6faf8e}
 .day.empty{background:transparent}
+
+.dot{width:8px;height:8px;background:#6faf8e;border-radius:50%;margin-top:6px}
+
+.switch{display:flex;gap:8px}
+.switch button{flex:1;background:#e5e7eb;color:#111}
+
 .row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:6px}
+
 button,input,select{padding:8px;border-radius:10px;border:1px solid #ddd;width:100%;margin:4px}
 button{background:#6faf8e;color:white;border:none;font-weight:600}
+
 .small{width:90px}
 .remove{color:#dc2626;font-weight:700;cursor:pointer}
-.stat{font-size:18px;font-weight:700}
 .flex{display:flex;gap:6px;flex-wrap:wrap}
+
+.chart{
+height:140px;background:linear-gradient(180deg,#ecfdf5,#fff);
+border-radius:12px;padding:10px;font-size:12px
+}
 </style>
 </head>
 
@@ -30,7 +55,7 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 <header>TimeBuild ERP 5.2</header>
 <div class="container">
 
-<div class="card flex">
+<div class="card topstats">
 <div>Dziś: <span id="today">0</span> zł</div>
 <div>Tydzień: <span id="week">0</span> zł</div>
 <div>Miesiąc: <span id="month">0</span> zł</div>
@@ -38,8 +63,21 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <div class="card">
+
+<div class="calendar-head">
+<button class="calbtn" onclick="moveMonth(-1)">◀</button>
+<b id="monthLabel"></b>
+<button class="calbtn" onclick="moveMonth(1)">▶</button>
+</div>
+
 <div id="weekdays" class="grid"></div>
 <div id="calendar" class="grid"></div>
+
+<div class="switch">
+<button onclick="view='month';render()">Miesiąc</button>
+<button onclick="view='week';render()">Tydzień</button>
+</div>
+
 </div>
 
 <div class="card">
@@ -79,7 +117,12 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <div class="card">
-<h3>📊 Rozliczenia</h3>
+<h3>📊 Zarobki (miesiąc)</h3>
+<div id="chart" class="chart"></div>
+</div>
+
+<div class="card">
+<h3>📋 Rozliczenia</h3>
 <div id="reports"></div>
 </div>
 
@@ -87,10 +130,7 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 
 <script>
 let db = JSON.parse(localStorage.getItem("ERP52")) || {
- workers:[],
- projects:[],
- entries:[],
- advances:[]
+ workers:[],projects:[],entries:[],advances:[]
 };
 
 const save=()=>localStorage.setItem("ERP52",JSON.stringify(db));
@@ -100,12 +140,19 @@ const days=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
 weekdays.innerHTML=days.map(d=>`<div class="weekday">${d}</div>`).join("");
 
 let selected=null;
+let view="month";
+let cur=new Date();
 
 const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
+
+function moveMonth(n){cur.setMonth(cur.getMonth()+n);render();}
 
 function buildCalendar(){
 calendar.innerHTML="";
-let now=new Date(),y=now.getFullYear(),m=now.getMonth();
+monthLabel.textContent=cur.toLocaleDateString("pl",{month:"long",year:"numeric"});
+
+let y=cur.getFullYear(),m=cur.getMonth();
 let first=new Date(y,m,1);
 let start=(first.getDay()+6)%7;
 let daysInMonth=new Date(y,m+1,0).getDate();
@@ -120,11 +167,13 @@ let sum=db.entries.filter(e=>e.date===k)
 
 calendar.innerHTML+=`
 <div class="day ${k===today?'today':''} ${k===selected?'active':''}"
-onclick="selectDay('${k}')">${i}<br>${sum||''}</div>`;
+onclick="selectDay('${k}')">
+${i}
+${sum>0?'<div class="dot"></div>':''}
+</div>`;
 }
 }
 
-const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
 function selectDay(k){selected=k;render();}
 
 function addWorker(){
@@ -156,12 +205,7 @@ save();render();
 }
 
 function addAdvance(){
-db.advances.push({
-id:uid(),
-worker:advWorker.value,
-date:key(new Date()),
-amount:+advAmount.value
-});
+db.advances.push({id:uid(),worker:advWorker.value,date:key(new Date()),amount:+advAmount.value});
 advAmount.value='';
 save();render();
 }
@@ -169,14 +213,9 @@ save();render();
 function render(){
 buildCalendar();
 
-workerSel.innerHTML='';
-projectSel.innerHTML='';
-advWorker.innerHTML='';
-workers.innerHTML='';
-projects.innerHTML='';
-dayEntries.innerHTML='';
-advList.innerHTML='';
-reports.innerHTML='';
+workerSel.innerHTML=projectSel.innerHTML=advWorker.innerHTML="";
+workers.innerHTML=projects.innerHTML=dayEntries.innerHTML=advList.innerHTML=reports.innerHTML="";
+chart.innerHTML="";
 
 db.workers.forEach(w=>{
 workerSel.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
@@ -223,15 +262,15 @@ ${w?.name} ${a.date}
 
 let today=key(new Date());
 let weekStart=new Date();weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
-let month=today.slice(0,7);
+let monthStr=today.slice(0,7);
 
-let t=0,wk=0,m=0,pay=0;
+let t=0,wk=0,mn=0,pay=0;
 
 db.entries.forEach(e=>{
 let cost=e.hours*rate(e.worker);
 if(e.date===today) t+=cost;
 if(new Date(e.date)>=weekStart) wk+=cost;
-if(e.date.startsWith(month)) m+=cost;
+if(e.date.startsWith(monthStr)) mn+=cost;
 });
 
 db.workers.forEach(w=>{
@@ -240,14 +279,15 @@ let earned=db.entries.filter(e=>e.worker===w.id)
 let adv=db.advances.filter(a=>a.worker===w.id)
 .reduce((s,a)=>s+a.amount,0);
 pay+=earned-adv;
-
 reports.innerHTML+=`<div class="row">${w.name}: ${earned-adv} zł (zaliczki ${adv})</div>`;
 });
 
 today.textContent=t;
 week.textContent=wk;
-month.textContent=m;
+month.textContent=mn;
 pay.textContent=pay;
+
+chart.textContent="(tu możesz później podpiąć wykres — dane już są gotowe)";
 }
 
 render();
