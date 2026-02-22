@@ -3,6 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <title>TimeBuild ERP 5.1 PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+
 <style>
 body{margin:0;font-family:system-ui;background:#f3f4f6}
 header{background:#0f172a;color:white;padding:16px;font-size:22px}
@@ -94,54 +96,50 @@ let db = JSON.parse(localStorage.getItem("ERP51")) || {
 const save=()=>localStorage.setItem("ERP51",JSON.stringify(db));
 const uid=()=>Date.now()+Math.random();
 
-const dateKey = d => {
-  const x = new Date(d);
-  return x.getFullYear()+"-"+String(x.getMonth()+1).padStart(2,"0")+"-"+String(x.getDate()).padStart(2,"0");
-};
-
 const days=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
 weekdays.innerHTML=days.map(d=>`<div class="weekday">${d}</div>`).join("");
 
 let current=new Date();
 let selected=null;
 
-function rate(id){return db.workers.find(w=>w.id===id)?.rate||0}
+function localKey(d){
+return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
+}
 
 function buildCalendar(){
 calendar.innerHTML="";
 let y=current.getFullYear(),m=current.getMonth();
 let first=new Date(y,m,1);
 let start=(first.getDay()+6)%7;
-let count=new Date(y,m+1,0).getDate();
-let today=dateKey(new Date());
+let daysInMonth=new Date(y,m+1,0).getDate();
+let today=localKey(new Date());
 
 for(let i=0;i<start;i++) calendar.innerHTML+=`<div class="day empty"></div>`;
 
-for(let i=1;i<=count;i++){
+for(let i=1;i<=daysInMonth;i++){
 let d=new Date(y,m,i);
-let k=dateKey(d);
+let k=localKey(d);
 
-let sum=db.entries.filter(e=>e.date===k)
-.reduce((s,e)=>s+e.hours*rate(e.workerId),0);
+let sum=db.entries
+.filter(e=>e.date===k)
+.reduce((s,e)=>s+e.hours*rate(e.worker),0);
 
 let cls="day"+(k===today?" today":"")+(k===selected?" active":"");
+calendar.innerHTML+=`<div class="${cls}" onclick="selectDay('${k}')">${i}<br>${sum||""}</div>`;
+}
+}
 
-calendar.innerHTML+=`
-<div class="${cls}" onclick="selected='${k}';render()">
-${i}<br>${sum||""}
-</div>`;
-}
-}
+function selectDay(k){selected=k;render();}
+
+const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
 
 function addWorker(){
-if(!wName.value) return;
-db.workers.push({id:uid(),name:wName.value,rate:+wRate.value||0});
+db.workers.push({id:uid(),name:wName.value,rate:+wRate.value});
 wName.value="";wRate.value="";
 save();render();
 }
 
 function addProject(){
-if(!pName.value) return;
 db.projects.push({id:uid(),name:pName.value});
 pName.value="";
 save();render();
@@ -155,8 +153,8 @@ db.workers.forEach(w=>{
 db.entries.push({
 id:uid(),
 date:selected,
-workerId:w.id,
-projectId:projectSel.value,
+worker:w.id,
+project:projectSel.value,
 hours:+hours.value
 });
 });
@@ -164,8 +162,8 @@ hours:+hours.value
 db.entries.push({
 id:uid(),
 date:selected,
-workerId:workerSel.value,
-projectId:projectSel.value,
+worker:workerSel.value,
+project:projectSel.value,
 hours:+hours.value
 });
 }
@@ -177,8 +175,8 @@ save();render();
 function addAdvance(){
 db.advances.push({
 id:uid(),
-workerId:advWorker.value,
-date:dateKey(new Date()),
+worker:advWorker.value,
+date:localKey(new Date()),
 amount:+advAmount.value
 });
 advAmount.value="";
@@ -219,8 +217,8 @@ projects.innerHTML+=`
 });
 
 db.entries.filter(e=>e.date===selected).forEach(e=>{
-let w=db.workers.find(x=>x.id===e.workerId);
-let p=db.projects.find(x=>x.id===e.projectId);
+let w=db.workers.find(x=>x.id===e.worker);
+let p=db.projects.find(x=>x.id===e.project);
 dayEntries.innerHTML+=`
 <div class="row">
 ${w?.name} – ${p?.name}
@@ -230,7 +228,7 @@ ${w?.name} – ${p?.name}
 });
 
 db.advances.forEach(a=>{
-let w=db.workers.find(x=>x.id===a.workerId);
+let w=db.workers.find(x=>x.id===a.worker);
 advList.innerHTML+=`
 <div class="row">
 ${w?.name} ${a.date}
@@ -239,38 +237,46 @@ ${w?.name} ${a.date}
 </div>`;
 });
 
-let today=dateKey(new Date());
-let weekStart=new Date();weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
+let today=localKey(new Date());
+let weekStart=new Date();
+weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
 let month=today.slice(0,7);
 
-let t=0,wk=0,mn=0,pay=0;
+let todaySum=0,weekSum=0,monthSum=0,paySum=0;
 
 db.entries.forEach(e=>{
-let cost=e.hours*rate(e.workerId);
-if(e.date===today) t+=cost;
-if(new Date(e.date)>=weekStart) wk+=cost;
-if(e.date.startsWith(month)) mn+=cost;
+let cost=e.hours*rate(e.worker);
+if(e.date===today) todaySum+=cost;
+if(new Date(e.date)>=weekStart) weekSum+=cost;
+if(e.date.startsWith(month)) monthSum+=cost;
 });
 
 db.workers.forEach(w=>{
-let earned=db.entries.filter(e=>e.workerId===w.id)
+let earned=db.entries.filter(e=>e.worker===w.id)
 .reduce((s,e)=>s+e.hours*w.rate,0);
-let adv=db.advances.filter(a=>a.workerId===w.id)
+
+let adv=db.advances.filter(a=>a.worker===w.id)
 .reduce((s,a)=>s+a.amount,0);
-let due=earned-adv;
-pay+=due;
+
+let pay=earned-adv;
+paySum+=pay;
 
 reports.innerHTML+=`
 <div class="row">
-${w.name}: tydzień/miesiąc → ${due} zł (zaliczki ${adv})
+${w.name}: <b>${pay} zł</b> (zaliczki ${adv})
 </div>`;
 });
 
-todaySum.textContent=t;
-weekSum.textContent=wk;
-monthSum.textContent=mn;
-paySum.textContent=pay;
+todaySumEl.textContent=todaySum;
+weekSumEl.textContent=weekSum;
+monthSumEl.textContent=monthSum;
+paySumEl.textContent=paySum;
 }
+
+todaySumEl=document.getElementById("todaySum");
+weekSumEl=document.getElementById("weekSum");
+monthSumEl=document.getElementById("monthSum");
+paySumEl=document.getElementById("paySum");
 
 render();
 </script>
