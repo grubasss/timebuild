@@ -7,23 +7,93 @@
 
 <style>
 :root{
---main:#5fa38c;--bg:#f3f7f6;--card:#fff;--soft:#eaf5f1;
---text:#1f2933;--danger:#dc2626;
+--main:#5fa38c;
+--bg:#f3f7f6;
+--card:#fff;
+--soft:#eaf5f1;
+--text:#1f2933;
+--danger:#dc2626;
 }
-.dark{--bg:#0f172a;--card:#1e293b;--soft:#24324a;--text:#e5e7eb;}
-body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
-header{display:flex;justify-content:space-between;align-items:center;
-background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
-.logo{height:42px;background:white;padding:6px;border-radius:12px}
+
+.dark{
+--bg:#0f172a;
+--card:#1e293b;
+--soft:#24324a;
+--text:#e5e7eb;
+}
+
+body{
+margin:0;
+font-family:system-ui;
+background:var(--bg);
+color:var(--text);
+}
+
+header{
+display:flex;
+justify-content:space-between;
+align-items:center;
+background:linear-gradient(135deg,#0f172a,#1e293b);
+color:white;
+padding:14px;
+}
+
+.logo{
+height:42px;
+background:white;
+padding:6px;
+border-radius:12px;
+}
+
 .container{max-width:1200px;margin:auto;padding:16px}
-.card{background:var(--card);padding:16px;border-radius:18px;margin:14px 0;
-box-shadow:0 8px 22px rgba(0,0,0,.12)}
-.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.day{background:var(--soft);border-radius:12px;padding:8px;text-align:center;cursor:pointer}
-.day.active{outline:3px solid var(--main)} .day.today{background:#bbf7d0}
-button,input,select{padding:8px;border-radius:10px;border:1px solid #ccc;margin:4px;width:100%}
-button{background:var(--main);color:white;font-weight:700;border:none}
-.row{display:flex;justify-content:space-between;border-bottom:1px solid var(--soft);padding:6px 0}
+
+.card{
+background:var(--card);
+padding:16px;
+border-radius:18px;
+margin:14px 0;
+box-shadow:0 8px 22px rgba(0,0,0,.12)
+}
+
+.grid{
+display:grid;
+grid-template-columns:repeat(7,1fr);
+gap:6px
+}
+
+.day{
+background:var(--soft);
+border-radius:12px;
+padding:8px;
+text-align:center;
+cursor:pointer
+}
+
+.day.today{background:#bbf7d0}
+.day.active{outline:3px solid var(--main)}
+
+button,input,select{
+padding:8px;
+border-radius:10px;
+border:1px solid #ccc;
+margin:4px;
+width:100%
+}
+
+button{
+background:var(--main);
+color:white;
+font-weight:700;
+border:none
+}
+
+.row{
+display:flex;
+justify-content:space-between;
+border-bottom:1px solid var(--soft);
+padding:6px 0
+}
+
 .small{width:90px}
 .remove{color:var(--danger);font-weight:800;cursor:pointer}
 .low{color:var(--danger);font-weight:800}
@@ -80,7 +150,12 @@ canvas{width:100%;height:180px}
 <select id="entryWorker"></select>
 <select id="entryProject"></select>
 <input id="entryHours" type="number" placeholder="Godziny">
-<button onclick="addEntry()">Dodaj</button>
+
+<div style="display:flex;gap:6px">
+<button onclick="addEntry()">Jednemu</button>
+<button onclick="addEntryAll()">Wszystkim</button>
+</div>
+
 <div id="entries"></div>
 </div>
 
@@ -88,7 +163,7 @@ canvas{width:100%;height:180px}
 <h3>💰 Zaliczki</h3>
 <select id="advWorker"></select>
 <input id="advAmount" type="number" placeholder="Kwota">
-<button onclick="addAdvance()">Dodaj zaliczkę</button>
+<button onclick="addAdvance()">Dodaj</button>
 <div id="advances"></div>
 </div>
 
@@ -105,7 +180,7 @@ canvas{width:100%;height:180px}
 <h3>💸 Koszty</h3>
 <select id="costProject"></select>
 <input id="costAmount" type="number" placeholder="Kwota">
-<button onclick="addCost()">Dodaj koszt</button>
+<button onclick="addCost()">Dodaj</button>
 <div id="costs"></div>
 </div>
 
@@ -120,6 +195,7 @@ canvas{width:100%;height:180px}
 let db=JSON.parse(localStorage.getItem("ERP_COMPLETE_PLUS"))||{
 workers:[],projects:[],entries:[],materials:[],costs:[],advances:[]
 };
+
 const save=()=>localStorage.setItem("ERP_COMPLETE_PLUS",JSON.stringify(db));
 const uid=()=>crypto.randomUUID();
 const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
@@ -144,10 +220,35 @@ calendar.innerHTML+=`<div class="day ${k===today?'today':''} ${k===selected?'act
 
 function addWorker(){db.workers.push({id:uid(),name:wName.value,rate:+wRate.value});wName.value=wRate.value="";save();render();}
 function addProject(){db.projects.push({id:uid(),name:pName.value});pName.value="";save();render();}
-function addEntry(){if(!selected)return;db.entries.push({id:uid(),date:selected,worker:entryWorker.value,project:entryProject.value,hours:+entryHours.value});entryHours.value="";save();render();}
-function addMaterial(){db.materials.push({id:uid(),name:mName.value,qty:+mQty.value,cost:+mCost.value});mName.value=mQty.value=mCost.value="";save();render();}
-function addCost(){db.costs.push({id:uid(),project:costProject.value,amount:+costAmount.value});costAmount.value="";save();render();}
-function addAdvance(){db.advances.push({id:uid(),worker:advWorker.value,date:key(new Date()),amount:+advAmount.value});advAmount.value="";save();render();}
+
+function addEntry(){
+if(!selected) return;
+db.entries.push({id:uid(),date:selected,worker:entryWorker.value,project:entryProject.value,hours:+entryHours.value});
+entryHours.value="";save();render();
+}
+
+function addEntryAll(){
+if(!selected||!entryHours.value) return;
+db.workers.forEach(w=>{
+db.entries.push({id:uid(),date:selected,worker:w.id,project:entryProject.value,hours:+entryHours.value});
+});
+entryHours.value="";save();render();
+}
+
+function addAdvance(){
+db.advances.push({id:uid(),worker:advWorker.value,date:key(new Date()),amount:+advAmount.value});
+advAmount.value="";save();render();
+}
+
+function addMaterial(){
+db.materials.push({id:uid(),name:mName.value,qty:+mQty.value,cost:+mCost.value});
+mName.value=mQty.value=mCost.value="";save();render();
+}
+
+function addCost(){
+db.costs.push({id:uid(),project:costProject.value,amount:+costAmount.value});
+costAmount.value="";save();render();
+}
 
 function render(){
 buildCalendar();
