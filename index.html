@@ -3,12 +3,12 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TimeBuild Pro</title>
+<title>TimeBuild Pro — House Concept</title>
 
 <style>
 :root{
---green:#6faf8e;
---dark:#1f2937;
+--primary:#6faf8e;
+--dark:#111827;
 --bg:#f3f4f6;
 --card:#ffffff;
 --border:#e5e7eb;
@@ -18,21 +18,34 @@ body{
 margin:0;
 font-family:system-ui,-apple-system;
 background:var(--bg);
+color:#111;
 }
 
 header{
-background:linear-gradient(90deg,var(--dark),#374151);
+background:linear-gradient(90deg,#111827,#1f2937);
 color:white;
-padding:16px;
+padding:18px;
 font-size:20px;
 font-weight:600;
 }
 
-.container{
-max-width:1100px;
-margin:auto;
-padding:16px;
+.container{max-width:1200px;margin:auto;padding:18px}
+
+.kpi{
+display:grid;
+grid-template-columns:repeat(auto-fit,minmax(180px,1fr));
+gap:14px;
+margin-bottom:20px;
 }
+
+.kpi-card{
+background:var(--card);
+padding:18px;
+border-radius:16px;
+box-shadow:0 8px 20px rgba(0,0,0,.08);
+}
+
+.kpi-card b{font-size:20px}
 
 .calendar,.weekdays{
 display:grid;
@@ -40,35 +53,46 @@ grid-template-columns:repeat(7,1fr);
 gap:6px;
 }
 
-.weekdays{
-font-weight:600;
-text-align:center;
-margin-bottom:6px;
-}
+.weekdays{text-align:center;font-weight:600;margin-bottom:6px}
 
 .day{
 background:var(--card);
+padding:10px;
 border-radius:12px;
-padding:8px;
 text-align:center;
 cursor:pointer;
-box-shadow:0 3px 8px rgba(0,0,0,.06);
-font-size:13px;
+box-shadow:0 3px 8px rgba(0,0,0,.05);
 }
 
-.day.active{outline:2px solid var(--green)}
-.day.today{background:#dcfce7;font-weight:700}
+.day.active{outline:2px solid var(--primary)}
+.day.today{background:#dcfce7}
 .day.weekend{background:#f9fafb}
 
 .card{
 background:var(--card);
-padding:18px;
-border-radius:16px;
-margin:16px 0;
-box-shadow:0 6px 16px rgba(0,0,0,.08);
+padding:20px;
+border-radius:18px;
+box-shadow:0 10px 25px rgba(0,0,0,.08);
+margin-bottom:20px;
 }
 
 h3{margin-top:0}
+
+button,input,select{
+padding:8px;
+border-radius:10px;
+border:1px solid var(--border);
+margin:6px 0;
+width:100%;
+}
+
+button{
+background:var(--primary);
+color:white;
+border:none;
+font-weight:600;
+cursor:pointer;
+}
 
 .row{
 display:flex;
@@ -78,44 +102,29 @@ padding:6px 0;
 border-bottom:1px solid var(--border);
 }
 
-button,input,select{
-padding:8px;
-border-radius:10px;
-border:1px solid var(--border);
-margin:6px 0;
-width:100%;
-font-size:14px;
-}
-
-button{
-background:var(--green);
-color:white;
-border:none;
-font-weight:600;
-cursor:pointer;
-}
-
-.flex{display:flex;gap:8px;flex-wrap:wrap}
-.small{width:80px}
 canvas{width:100%}
-.entry-remove{
+.history-item{
+font-size:13px;
+display:flex;
+justify-content:space-between;
+}
+.remove{
 color:red;
 cursor:pointer;
-font-weight:bold;
 }
 </style>
 </head>
 
 <body>
 
-<header>TimeBuild Pro</header>
+<header>House Concept — TimeBuild Pro</header>
 
 <div class="container">
 
-<div class="flex">
-<button onclick="prevMonth()">⬅</button>
-<b id="monthLabel"></b>
-<button onclick="nextMonth()">➡</button>
+<div class="kpi">
+<div class="kpi-card">⏱ Godziny<br><b id="kpiHours"></b></div>
+<div class="kpi-card">💰 Koszt całkowity<br><b id="kpiCost"></b></div>
+<div class="kpi-card">💸 Zaliczki (miesiąc)<br><b id="kpiAdvance"></b></div>
 </div>
 
 <div class="weekdays">
@@ -124,57 +133,56 @@ font-weight:bold;
 <div class="calendar" id="calendar"></div>
 
 <div class="card">
-<h3>Dzień pracy</h3>
-
+<h3>Dodaj godziny</h3>
 <select id="project"></select>
 <input id="hours" type="number" placeholder="Godziny">
-
 <div id="checks"></div>
-
-<div class="flex">
-<button onclick="addAll()">Wszyscy</button>
-<button onclick="addSelected()">Wybrani</button>
-</div>
-
-<div id="dayEntries"></div>
+<button onclick="addSelected()">Dodaj wybranym</button>
 </div>
 
 <div class="card">
-<h3>Zaliczki</h3>
+<h3>Dodaj zaliczkę</h3>
 <select id="advWorker"></select>
 <input id="advAmount" type="number" placeholder="Kwota">
-<button onclick="addAdvance()">Dodaj zaliczkę</button>
+<button onclick="addAdvance()">Dodaj</button>
+<div id="advanceHistory"></div>
 </div>
 
 <div class="card">
-<h3>Rozliczenie pracowników</h3>
+<h3>📊 Wykres kosztów projektów</h3>
+<canvas id="chartProjects" height="160"></canvas>
+</div>
+
+<div class="card">
+<h3>📈 Wykres kosztów miesięcznych</h3>
+<canvas id="chartMonths" height="160"></canvas>
+</div>
+
+<div class="card">
+<h3>👷 Wypłaty pracowników</h3>
 <div id="workerReport"></div>
 </div>
 
 </div>
 
 <script>
-
-let db=JSON.parse(localStorage.getItem("tbpro"))||{
+let db=JSON.parse(localStorage.getItem("tbpro2"))||{
 workers:[
-{name:"Łukasz Nowak",rate:25,advance:0},
-{name:"Ariel Walczak",rate:25,advance:0},
-{name:"Daniel Daniel",rate:25,advance:0}
+{name:"Łukasz Nowak",rate:25,advances:[]},
+{name:"Ariel Walczak",rate:25,advances:[]},
+{name:"Daniel Daniel",rate:25,advances:[]}
 ],
 projects:["Dom Wola"],
 entries:{}
 };
 
-let current=new Date();
 let selected=null;
-
-const save=()=>localStorage.setItem("tbpro",JSON.stringify(db));
+let current=new Date();
+const save=()=>localStorage.setItem("tbpro2",JSON.stringify(db));
 const key=d=>d.toISOString().slice(0,10);
 
 function renderCalendar(){
 calendar.innerHTML="";
-monthLabel.textContent=current.toLocaleString("pl",{month:"long",year:"numeric"});
-
 let first=new Date(current.getFullYear(),current.getMonth(),1);
 let start=(first.getDay()+6)%7;
 let days=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
@@ -186,22 +194,12 @@ for(let i=1;i<=days;i++){
 let d=new Date(current.getFullYear(),current.getMonth(),i);
 let k=key(d);
 let sum=(db.entries[k]||[]).reduce((a,b)=>a+b.h,0);
-
 let el=document.createElement("div");
 el.className="day"+(selected===k?" active":"")+(k===todayKey?" today":"")+([0,6].includes(d.getDay())?" weekend":"");
-el.innerHTML=`${i}<br><b>${sum||""}</b>`;
+el.innerHTML=`${i}<br>${sum||""}`;
 el.onclick=()=>{selected=k;renderAll()};
 calendar.appendChild(el);
 }
-}
-
-function addAll(){
-if(!selected||!hours.value) return;
-db.entries[selected]=db.entries[selected]||[];
-db.workers.forEach((w,i)=>{
-db.entries[selected].push({w:i,p:project.value,h:+hours.value});
-});
-save();renderAll();
 }
 
 function addSelected(){
@@ -213,73 +211,101 @@ db.entries[selected].push({w:+c.value,p:project.value,h:+hours.value});
 save();renderAll();
 }
 
-function removeEntry(i){
-db.entries[selected].splice(i,1);
-save();renderAll();
-}
-
 function addAdvance(){
 if(!advAmount.value) return;
-db.workers[advWorker.value].advance+=+advAmount.value;
+let w=db.workers[advWorker.value];
+w.advances.push({date:new Date().toISOString(),amount:+advAmount.value});
 advAmount.value="";
 save();renderAll();
 }
 
-function prevMonth(){
-current.setMonth(current.getMonth()-1);
-selected=null;
-renderAll();
-}
-
-function nextMonth(){
-current.setMonth(current.getMonth()+1);
-selected=null;
-renderAll();
+function removeAdvance(wi,ai){
+db.workers[wi].advances.splice(ai,1);
+save();renderAll();
 }
 
 function renderAll(){
 renderCalendar();
-
 checks.innerHTML="";
 project.innerHTML="";
 advWorker.innerHTML="";
-dayEntries.innerHTML="";
+advanceHistory.innerHTML="";
 workerReport.innerHTML="";
 
-db.projects.forEach(p=>{
-project.innerHTML+=`<option>${p}</option>`;
-});
+db.projects.forEach(p=>project.innerHTML+=`<option>${p}</option>`);
 
 db.workers.forEach((w,i)=>{
 checks.innerHTML+=`<label><input type="checkbox" value="${i}">${w.name}</label>`;
 advWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
 });
 
-(db.entries[selected]||[]).forEach((e,i)=>{
-dayEntries.innerHTML+=`
-<div class="row">
-${db.workers[e.w].name} – ${e.h}h (${e.p})
-<span class="entry-remove" onclick="removeEntry(${i})">✕</span>
-</div>`;
-});
+let totalH=0,totalC=0,totalAdvMonth=0;
 
 db.workers.forEach((w,i)=>{
 let h=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{if(e.w===i)h+=e.h}));
-let pay=h*w.rate-w.advance;
+Object.entries(db.entries).forEach(([k,d])=>{
+d.forEach(e=>{if(e.w===i)h+=e.h});
+});
+let cost=h*w.rate;
+let month=current.toISOString().slice(0,7);
+let advMonth=w.advances.filter(a=>a.date.slice(0,7)===month)
+.reduce((s,a)=>s+a.amount,0);
+
+totalH+=h;
+totalC+=cost;
+totalAdvMonth+=advMonth;
+
 workerReport.innerHTML+=`
-<div class="card">
-<b>${w.name}</b><br>
-Godziny: ${h}h<br>
-Stawka: ${w.rate} zł<br>
-Zaliczki: ${w.advance} zł<br>
-<b>Do wypłaty: ${pay} zł</b>
+<div class="row">
+${w.name} — ${h}h — ${cost-advMonth} zł
 </div>`;
+
+w.advances.forEach((a,ai)=>{
+advanceHistory.innerHTML+=`
+<div class="history-item">
+${w.name} ${a.date.slice(0,10)} — ${a.amount} zł
+<span class="remove" onclick="removeAdvance(${i},${ai})">✕</span>
+</div>`;
+});
+});
+
+kpiHours.textContent=totalH+" h";
+kpiCost.textContent=totalC+" zł";
+kpiAdvance.textContent=totalAdvMonth+" zł";
+
+drawCharts();
+}
+
+function drawCharts(){
+let ctx=document.getElementById("chartProjects").getContext("2d");
+ctx.clearRect(0,0,500,200);
+let costs=db.projects.map(p=>{
+let s=0;
+Object.values(db.entries).forEach(d=>d.forEach(e=>{
+if(e.p===p)s+=e.h*db.workers[e.w].rate;
+}));
+return s;
+});
+costs.forEach((v,i)=>{
+ctx.fillStyle="#6faf8e";
+ctx.fillRect(i*60,150-v/5,40,v/5);
+});
+
+let ctx2=document.getElementById("chartMonths").getContext("2d");
+ctx2.clearRect(0,0,500,200);
+let map={};
+Object.keys(db.entries).forEach(k=>{
+let m=k.slice(0,7);
+map[m]=map[m]||0;
+db.entries[k].forEach(e=>map[m]+=e.h*db.workers[e.w].rate);
+});
+Object.values(map).forEach((v,i)=>{
+ctx2.fillStyle="#10b981";
+ctx2.fillRect(i*60,150-v/5,40,v/5);
 });
 }
 
 renderAll();
 </script>
-
 </body>
 </html>
