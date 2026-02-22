@@ -3,155 +3,94 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>House Concept ERP ULTRA</title>
+<title>House Concept ERP COMPLETE</title>
 
 <style>
 :root{
---main:#5fa38c;
---main-dark:#3f7f6b;
---bg:#f3f7f6;
---card:#ffffff;
---soft:#eaf5f1;
---text:#1f2933;
---muted:#6b7280;
---danger:#dc2626;
+--main:#5fa38c;--dark:#0f172a;--bg:#f3f7f6;--card:#fff;--soft:#eaf5f1;
+--text:#1f2933;--muted:#6b7280;--danger:#dc2626;
 }
-
-.dark{
---bg:#0f172a;
---card:#1e293b;
---soft:#24324a;
---text:#e5e7eb;
---muted:#94a3b8;
-}
-
-body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text);transition:.3s}
-
-.app-header{
-display:flex;justify-content:space-between;align-items:center;
-background:linear-gradient(135deg,#0f172a,#1e293b);
-padding:14px 18px;color:white;
-}
-
-.left{display:flex;align-items:center;gap:12px}
+.dark{--bg:#0f172a;--card:#1e293b;--soft:#24324a;--text:#e5e7eb;--muted:#94a3b8;}
+body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
+header{display:flex;justify-content:space-between;align-items:center;
+background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px 18px}
 .logo{height:42px;background:white;padding:6px;border-radius:12px}
-
 .container{max-width:1200px;margin:auto;padding:18px}
-
-.card{
-background:var(--card);
-padding:18px;
-border-radius:18px;
-margin:16px 0;
-box-shadow:0 12px 26px rgba(0,0,0,.12);
-}
-
-.topstats{display:flex;gap:10px;flex-wrap:wrap}
-.topstats div{
-background:var(--soft);
-padding:12px 16px;
-border-radius:14px;
-font-weight:800;
-}
-
-.calendar-head{
-display:flex;justify-content:space-between;align-items:center;font-weight:800;
-}
-
-.calbtn{
-background:var(--soft);
-border:none;padding:6px 14px;border-radius:12px;font-weight:700;cursor:pointer;color:var(--text);
-}
-
-.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:8px}
-.weekday{text-align:center;color:var(--muted);font-weight:700}
-
-.day{
-background:var(--soft);
-border-radius:16px;
-min-height:68px;
-display:flex;flex-direction:column;align-items:center;justify-content:center;
-font-weight:700;cursor:pointer;
-}
-
-.day.today{background:#bbf7d0}
-.day.active{outline:3px solid var(--main)}
-.day.empty{background:transparent}
-
-.dot{width:8px;height:8px;background:var(--main);border-radius:50%;margin-top:6px}
-
-button,input,select{
-padding:10px;border-radius:14px;border:1px solid #ccc;margin:4px;width:100%;
-}
-
-button{
-background:linear-gradient(135deg,var(--main),var(--main-dark));
-color:white;font-weight:800;border:none;cursor:pointer;
-}
-
+.card{background:var(--card);padding:16px;border-radius:18px;margin:14px 0;
+box-shadow:0 8px 22px rgba(0,0,0,.12)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.weekday{text-align:center;font-weight:700;color:var(--muted)}
+.day{background:var(--soft);border-radius:12px;padding:10px;text-align:center;cursor:pointer}
+.day.active{outline:3px solid var(--main)} .day.today{background:#bbf7d0}
+button,input,select{padding:10px;border-radius:12px;border:1px solid #ccc;width:100%;margin:4px}
+button{background:var(--main);color:white;font-weight:700;border:none}
 .row{display:flex;justify-content:space-between;border-bottom:1px solid var(--soft);padding:6px 0}
-.small{width:90px}
-.remove{color:var(--danger);font-weight:800;cursor:pointer}
+.small{width:90px} .remove{color:var(--danger);font-weight:800;cursor:pointer}
 .low{color:var(--danger);font-weight:800}
 canvas{width:100%;height:180px}
-.toggle{background:var(--soft);padding:6px 12px;border-radius:12px;cursor:pointer;font-weight:700}
-
-#lock{
-position:fixed;inset:0;background:#0f172a;color:white;
-display:flex;flex-direction:column;align-items:center;justify-content:center;z-index:9999;
-}
+.toggle{background:var(--soft);padding:6px 12px;border-radius:12px;cursor:pointer}
 </style>
 </head>
 
 <body>
 
-<div id="lock">
-<h2>House Concept ERP</h2>
-<input id="pin" type="password" placeholder="PIN">
-<button onclick="login()">Wejdź</button>
-</div>
-
-<header class="app-header">
-<div class="left">
-<img class="logo" src="6CBB60BF-B078-44B2-A9D7-17BF53C87CAF.png">
-<b>House Concept ERP ULTRA</b>
+<header>
+<div style="display:flex;gap:12px;align-items:center">
+<img src="6CBB60BF-B078-44B2-A9D7-17BF53C87CAF.png" class="logo">
+<b>House Concept ERP COMPLETE</b>
 </div>
 <div class="toggle" onclick="toggleDark()">🌙</div>
 </header>
 
 <div class="container">
 
-<div class="card topstats">
-<div>Dziś: <span id="todayStat">0</span> zł</div>
-<div>Tydzień: <span id="weekStat">0</span> zł</div>
-<div>Miesiąc: <span id="monthStat">0</span> zł</div>
-<div>Zysk: <span id="profitStat">0</span> zł</div>
+<div class="card">
+<b>Statystyki</b>
+<div class="row">Dziś: <span id="todayStat">0</span> zł</div>
+<div class="row">Tydzień: <span id="weekStat">0</span> zł</div>
+<div class="row">Miesiąc: <span id="monthStat">0</span> zł</div>
+<div class="row">Zysk: <span id="profitStat">0</span> zł</div>
 </div>
 
 <div class="card">
-<div class="calendar-head">
-<button class="calbtn" onclick="moveMonth(-1)">◀</button>
+<div style="display:flex;justify-content:space-between">
+<button onclick="moveMonth(-1)">◀</button>
 <b id="monthLabel"></b>
-<button class="calbtn" onclick="moveMonth(1)">▶</button>
+<button onclick="moveMonth(1)">▶</button>
 </div>
 <div id="weekdays" class="grid"></div>
 <div id="calendar" class="grid"></div>
 </div>
 
 <div class="card">
-<h3>⏱ Rejestr czasu pracy</h3>
-<select id="timeWorker"></select>
-<select id="timeProject"></select>
-<button onclick="startWork()">Start</button>
-<button onclick="stopWork()">Stop</button>
-<div id="timeLog"></div>
+<h3>👷 Pracownicy</h3>
+<input id="wName" placeholder="Imię">
+<input id="wRate" type="number" placeholder="Stawka">
+<button onclick="addWorker()">Dodaj</button>
+<div id="workers"></div>
 </div>
 
 <div class="card">
-<h3>📦 Magazyn (alert &lt;5)</h3>
+<h3>🏗 Projekty</h3>
+<input id="pName" placeholder="Projekt">
+<button onclick="addProject()">Dodaj</button>
+<div id="projects"></div>
+</div>
+
+<div class="card">
+<h3>⏱ Godziny pracy (edycja)</h3>
+<select id="entryWorker"></select>
+<select id="entryProject"></select>
+<input id="entryHours" type="number" placeholder="Godziny">
+<button onclick="addEntry()">Dodaj godziny</button>
+<div id="entries"></div>
+</div>
+
+<div class="card">
+<h3>📦 Magazyn</h3>
 <input id="mName" placeholder="Materiał">
 <input id="mQty" type="number" placeholder="Ilość">
-<input id="mCost" type="number" placeholder="Cena/szt">
+<input id="mCost" type="number" placeholder="Cena">
 <button onclick="addMaterial()">Dodaj</button>
 <div id="materials"></div>
 </div>
@@ -165,32 +104,30 @@ display:flex;flex-direction:column;align-items:center;justify-content:center;z-i
 </div>
 
 <div class="card">
-<h3>📊 Analityka</h3>
+<h3>📊 Wykres roboczogodzin</h3>
 <canvas id="chart"></canvas>
+</div>
+
+<div class="card">
+<h3>💾 Backup</h3>
+<button onclick="backup()">Pobierz dane</button>
+<input type="file" onchange="restore(this)">
 </div>
 
 </div>
 
 <script>
-let PIN="1234";
-let db=JSON.parse(localStorage.getItem("ERP_ULTRA"))||{
-workers:[],projects:[],entries:[],time:[],materials:[],costs:[],active:null
+let db=JSON.parse(localStorage.getItem("ERP_COMPLETE"))||{
+workers:[],projects:[],entries:[],materials:[],costs:[]
 };
-
-const save=()=>localStorage.setItem("ERP_ULTRA",JSON.stringify(db));
+const save=()=>localStorage.setItem("ERP_COMPLETE",JSON.stringify(db));
 const uid=()=>crypto.randomUUID();
 const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
-
-function login(){
-if(pin.value===PIN) document.getElementById("lock").style.display="none";
-else alert("Zły PIN");
-}
 
 const days=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
 weekdays.innerHTML=days.map(d=>`<div class="weekday">${d}</div>`).join("");
 
-let selected=null;
-let cur=new Date();
+let cur=new Date(),selected=null;
 const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
 function moveMonth(n){cur.setMonth(cur.getMonth()+n);render();}
@@ -202,64 +139,91 @@ monthLabel.textContent=cur.toLocaleDateString("pl",{month:"long",year:"numeric"}
 let y=cur.getFullYear(),m=cur.getMonth();
 let start=(new Date(y,m,1).getDay()+6)%7;
 let daysInMonth=new Date(y,m+1,0).getDate();
-let todayKey=key(new Date());
+let today=key(new Date());
 
-for(let i=0;i<start;i++) calendar.innerHTML+=`<div class="day empty"></div>`;
+for(let i=0;i<start;i++) calendar.innerHTML+=`<div></div>`;
 for(let i=1;i<=daysInMonth;i++){
 let d=new Date(y,m,i),k=key(d);
-let has=db.time.some(t=>t.date===k);
-calendar.innerHTML+=`<div class="day ${k===todayKey?'today':''} ${k===selected?'active':''}" onclick="selectDay('${k}')">${i}${has?'<div class="dot"></div>':''}</div>`;
+calendar.innerHTML+=`<div class="day ${k===today?'today':''} ${k===selected?'active':''}"
+onclick="selectDay('${k}')">${i}</div>`;
 }
 }
 
+function addWorker(){
+db.workers.push({id:uid(),name:wName.value,rate:+wRate.value});
+wName.value=wRate.value="";save();render();
+}
+function addProject(){
+db.projects.push({id:uid(),name:pName.value});
+pName.value="";save();render();
+}
+function addEntry(){
+if(!selected) return;
+db.entries.push({id:uid(),date:selected,worker:entryWorker.value,project:entryProject.value,hours:+entryHours.value});
+entryHours.value="";save();render();
+}
 function addMaterial(){
 db.materials.push({id:uid(),name:mName.value,qty:+mQty.value,cost:+mCost.value});
-mName.value=mQty.value=mCost.value="";
-save();render();
+mName.value=mQty.value=mCost.value="";save();render();
 }
-
 function addCost(){
 db.costs.push({id:uid(),project:costProject.value,amount:+costAmount.value});
-costAmount.value="";
-save();render();
+costAmount.value="";save();render();
 }
 
-function startWork(){
-if(db.active) return alert("Już trwa praca!");
-db.active={worker:timeWorker.value,project:timeProject.value,start:Date.now(),date:selected};
+function backup(){
+const blob=new Blob([JSON.stringify(db)],{type:"application/json"});
+const a=document.createElement("a");
+a.href=URL.createObjectURL(blob);a.download="erp-backup.json";a.click();
 }
-
-function stopWork(){
-if(!db.active) return;
-let h=(Date.now()-db.active.start)/3600000;
-db.time.push({...db.active,hours:h});
-db.active=null;
-save();render();
+function restore(f){
+const r=new FileReader();
+r.onload=e=>{db=JSON.parse(e.target.result);save();render();}
+r.readAsText(f.files[0]);
 }
 
 function render(){
 buildCalendar();
-timeWorker.innerHTML=timeProject.innerHTML=costProject.innerHTML="";
-materials.innerHTML=costs.innerHTML=timeLog.innerHTML="";
+workers.innerHTML=projects.innerHTML=entries.innerHTML=materials.innerHTML=costs.innerHTML="";
+entryWorker.innerHTML=entryProject.innerHTML=costProject.innerHTML="";
 
-db.workers.forEach(w=>timeWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`);
+db.workers.forEach(w=>{
+workers.innerHTML+=`<div class="row">
+<input value="${w.name}" oninput="w.name=this.value;save()">
+<input class="small" value="${w.rate}" oninput="w.rate=+this.value;save()">
+<span class="remove" onclick="db.workers=db.workers.filter(x=>x.id!='${w.id}');save();render()">✖</span>
+</div>`;
+entryWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+});
+
 db.projects.forEach(p=>{
-timeProject.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
+projects.innerHTML+=`<div class="row">
+<input value="${p.name}" oninput="p.name=this.value;save()">
+<span class="remove" onclick="db.projects=db.projects.filter(x=>x.id!='${p.id}');save();render()">✖</span>
+</div>`;
+entryProject.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
 costProject.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
 });
 
+db.entries.filter(e=>e.date===selected).forEach(e=>{
+let w=db.workers.find(x=>x.id===e.worker);
+entries.innerHTML+=`<div class="row">
+${w?.name} 
+<input class="small" value="${e.hours}" oninput="e.hours=+this.value;save();render()">
+<span class="remove" onclick="db.entries=db.entries.filter(x=>x.id!='${e.id}');save();render()">✖</span>
+</div>`;
+});
+
 db.materials.forEach(m=>{
-materials.innerHTML+=`<div class="row ${m.qty<5?'low':''}">${m.name} ${m.qty} szt</div>`;
+materials.innerHTML+=`<div class="row ${m.qty<5?'low':''}">
+${m.name} 
+<input class="small" value="${m.qty}" oninput="m.qty=+this.value;save();render()">
+</div>`;
 });
 
 db.costs.forEach(c=>{
 let p=db.projects.find(x=>x.id===c.project);
 costs.innerHTML+=`<div class="row">${p?.name}: ${c.amount} zł</div>`;
-});
-
-db.time.filter(t=>t.date===selected).forEach(t=>{
-let w=db.workers.find(x=>x.id===t.worker);
-timeLog.innerHTML+=`<div class="row">${w?.name}: ${t.hours.toFixed(2)}h</div>`;
 });
 
 calculateStats();
@@ -271,35 +235,26 @@ let todayK=key(new Date());
 let weekStart=new Date();weekStart.setDate(weekStart.getDate()-((weekStart.getDay()+6)%7));
 let monthStr=todayK.slice(0,7);
 
-let today=0,week=0,month=0;
-db.time.forEach(t=>{
-let cost=t.hours*rate(t.worker);
-if(t.date===todayK) today+=cost;
-if(new Date(t.date)>=weekStart) week+=cost;
-if(t.date.startsWith(monthStr)) month+=cost;
+let t=0,w=0,m=0;
+db.entries.forEach(e=>{
+let cost=e.hours*rate(e.worker);
+if(e.date===todayK) t+=cost;
+if(new Date(e.date)>=weekStart) w+=cost;
+if(e.date.startsWith(monthStr)) m+=cost;
 });
-
-let costsTotal=db.costs.reduce((s,c)=>s+c.amount,0);
-let profit=month-costsTotal;
-
-todayStat.textContent=today.toFixed(0);
-weekStat.textContent=week.toFixed(0);
-monthStat.textContent=month.toFixed(0);
-profitStat.textContent=profit.toFixed(0);
+let costs=db.costs.reduce((s,c)=>s+c.amount,0);
+todayStat.textContent=t;weekStat.textContent=w;monthStat.textContent=m;profitStat.textContent=m-costs;
 }
 
 function drawChart(){
-let c=document.getElementById("chart").getContext("2d");
-c.clearRect(0,0,400,200);
+let ctx=document.getElementById("chart").getContext("2d");
+ctx.clearRect(0,0,400,200);
 let map={};
-db.time.forEach(t=>map[t.date]=(map[t.date]||0)+t.hours*rate(t.worker));
-let vals=Object.values(map);
-let max=Math.max(...vals,10);
-let w=300/(vals.length||1);
+db.entries.forEach(e=>map[e.date]=(map[e.date]||0)+e.hours*rate(e.worker));
+let vals=Object.values(map);let max=Math.max(...vals,10);let w=300/(vals.length||1);
 vals.forEach((v,i)=>{
-let h=(v/max)*150;
-c.fillStyle="#5fa38c";
-c.fillRect(i*w+10,180-h,w-6,h);
+let h=(v/max)*150;ctx.fillStyle="#5fa38c";
+ctx.fillRect(i*w+10,180-h,w-6,h);
 });
 }
 
