@@ -6,27 +6,110 @@
 <title>TimeBuild Pro</title>
 
 <style>
-body{margin:0;font-family:system-ui;background:#f4f7f6}
-header{background:#2f4f4f;color:white;padding:14px}
-.container{max-width:1100px;margin:auto;padding:14px}
-.calendar,.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
-.weekdays{font-weight:600;text-align:center}
-.day{background:white;border-radius:10px;padding:8px;font-size:13px;text-align:center;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.06)}
-.day.active{outline:2px solid #6faf8e}
-.day.today{background:#e8f5ef;font-weight:700}
-.day.weekend{background:#f0f0f0}
-.card{background:white;padding:14px;border-radius:14px;margin:12px 0}
-.row{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:4px 0}
-button,input,select{padding:6px;border-radius:6px;border:1px solid #ccc;margin:4px 0;width:100%}
-button{background:#6faf8e;color:white;border:none;font-weight:600}
-.flex{display:flex;gap:6px;flex-wrap:wrap}
+:root{
+--green:#6faf8e;
+--dark:#1f2937;
+--bg:#f3f4f6;
+--card:#ffffff;
+--border:#e5e7eb;
+}
+
+body{
+margin:0;
+font-family:system-ui,-apple-system;
+background:var(--bg);
+}
+
+header{
+background:linear-gradient(90deg,var(--dark),#374151);
+color:white;
+padding:16px;
+font-size:20px;
+font-weight:600;
+}
+
+.container{
+max-width:1100px;
+margin:auto;
+padding:16px;
+}
+
+.calendar,.weekdays{
+display:grid;
+grid-template-columns:repeat(7,1fr);
+gap:6px;
+}
+
+.weekdays{
+font-weight:600;
+text-align:center;
+margin-bottom:6px;
+}
+
+.day{
+background:var(--card);
+border-radius:12px;
+padding:8px;
+text-align:center;
+cursor:pointer;
+box-shadow:0 3px 8px rgba(0,0,0,.06);
+font-size:13px;
+}
+
+.day.active{outline:2px solid var(--green)}
+.day.today{background:#dcfce7;font-weight:700}
+.day.weekend{background:#f9fafb}
+
+.card{
+background:var(--card);
+padding:18px;
+border-radius:16px;
+margin:16px 0;
+box-shadow:0 6px 16px rgba(0,0,0,.08);
+}
+
+h3{margin-top:0}
+
+.row{
+display:flex;
+justify-content:space-between;
+align-items:center;
+padding:6px 0;
+border-bottom:1px solid var(--border);
+}
+
+button,input,select{
+padding:8px;
+border-radius:10px;
+border:1px solid var(--border);
+margin:6px 0;
+width:100%;
+font-size:14px;
+}
+
+button{
+background:var(--green);
+color:white;
+border:none;
+font-weight:600;
+cursor:pointer;
+}
+
+.flex{display:flex;gap:8px;flex-wrap:wrap}
 .small{width:80px}
 canvas{width:100%}
+.entry-remove{
+color:red;
+cursor:pointer;
+font-weight:bold;
+}
 </style>
 </head>
 
 <body>
-<header><b>TimeBuild Pro</b></header>
+
+<header>TimeBuild Pro</header>
+
 <div class="container">
 
 <div class="flex">
@@ -42,6 +125,7 @@ canvas{width:100%}
 
 <div class="card">
 <h3>Dzień pracy</h3>
+
 <select id="project"></select>
 <input id="hours" type="number" placeholder="Godziny">
 
@@ -50,25 +134,9 @@ canvas{width:100%}
 <div class="flex">
 <button onclick="addAll()">Wszyscy</button>
 <button onclick="addSelected()">Wybrani</button>
-<button onclick="copyYesterday()">Kopiuj wczoraj</button>
 </div>
 
-<div class="flex">
-<button onclick="quick(8)">8h</button>
-<button onclick="quick(10)">10h</button>
-<button onclick="quick(12)">12h</button>
-<button onclick="markOff()">Wolne</button>
-</div>
-</div>
-
-<div class="card">
-<h3>📊 Koszty projektów</h3>
-<canvas id="costChart" height="180"></canvas>
-</div>
-
-<div class="card">
-<h3>📈 Koszty miesięczne</h3>
-<canvas id="monthChart" height="180"></canvas>
+<div id="dayEntries"></div>
 </div>
 
 <div class="card">
@@ -79,36 +147,14 @@ canvas{width:100%}
 </div>
 
 <div class="card">
-<h3>Pracownicy</h3>
-<div id="workers"></div>
-</div>
-
-<div class="card">
-<h3>Projekty</h3>
-<input id="newProject" placeholder="Nowy projekt">
-<button onclick="addProject()">Dodaj</button>
-<div id="projects"></div>
-</div>
-
-<div class="card">
 <h3>Rozliczenie pracowników</h3>
 <div id="workerReport"></div>
-</div>
-
-<div class="card">
-<h3>Rozliczenie projektów</h3>
-<div id="projectReport"></div>
-</div>
-
-<div class="card">
-<button onclick="backup()">Backup danych</button>
-<input type="file" onchange="restore(event)">
-<button onclick="exportCSV()">Excel</button>
 </div>
 
 </div>
 
 <script>
+
 let db=JSON.parse(localStorage.getItem("tbpro"))||{
 workers:[
 {name:"Łukasz Nowak",rate:25,advance:0},
@@ -128,6 +174,7 @@ const key=d=>d.toISOString().slice(0,10);
 function renderCalendar(){
 calendar.innerHTML="";
 monthLabel.textContent=current.toLocaleString("pl",{month:"long",year:"numeric"});
+
 let first=new Date(current.getFullYear(),current.getMonth(),1);
 let start=(first.getDay()+6)%7;
 let days=new Date(current.getFullYear(),current.getMonth()+1,0).getDate();
@@ -142,7 +189,7 @@ let sum=(db.entries[k]||[]).reduce((a,b)=>a+b.h,0);
 
 let el=document.createElement("div");
 el.className="day"+(selected===k?" active":"")+(k===todayKey?" today":"")+([0,6].includes(d.getDay())?" weekend":"");
-el.innerHTML=`${i}<br>${sum||""}`;
+el.innerHTML=`${i}<br><b>${sum||""}</b>`;
 el.onclick=()=>{selected=k;renderAll()};
 calendar.appendChild(el);
 }
@@ -166,174 +213,73 @@ db.entries[selected].push({w:+c.value,p:project.value,h:+hours.value});
 save();renderAll();
 }
 
-function quick(h){hours.value=h}
-function copyYesterday(){
-let d=new Date(selected);d.setDate(d.getDate()-1);
-db.entries[selected]=JSON.parse(JSON.stringify(db.entries[key(d)]||[]));
+function removeEntry(i){
+db.entries[selected].splice(i,1);
 save();renderAll();
 }
-function markOff(){db.entries[selected]=[];save();renderAll()}
-function addProject(){db.projects.push(newProject.value);newProject.value="";save();renderAll()}
-function prevMonth(){current.setMonth(current.getMonth()-1);renderAll()}
-function nextMonth(){current.setMonth(current.getMonth()+1);renderAll()}
 
 function addAdvance(){
+if(!advAmount.value) return;
 db.workers[advWorker.value].advance+=+advAmount.value;
 advAmount.value="";
 save();renderAll();
 }
 
-function backup(){
-let b=new Blob([JSON.stringify(db)],{type:"application/json"});
-let a=document.createElement("a");
-a.href=URL.createObjectURL(b);
-a.download="backup.json";
-a.click();
+function prevMonth(){
+current.setMonth(current.getMonth()-1);
+selected=null;
+renderAll();
 }
 
-function restore(e){
-let r=new FileReader();
-r.onload=()=>{db=JSON.parse(r.result);save();renderAll()};
-r.readAsText(e.target.files[0]);
-}
-
-function exportCSV(){
-let rows=["Typ,Nazwa,Godziny,Koszt"];
-db.workers.forEach((w,i)=>{
-let h=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{if(e.w===i)h+=e.h}));
-rows.push(`Pracownik,${w.name},${h},${h*w.rate-w.advance}`);
-});
-db.projects.forEach(p=>{
-let h=0,c=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{
-if(e.p===p){h+=e.h;c+=e.h*db.workers[e.w].rate}
-}));
-rows.push(`Projekt,${p},${h},${c}`);
-});
-let blob=new Blob([rows.join("\n")],{type:"text/csv"});
-let a=document.createElement("a");
-a.href=URL.createObjectURL(blob);
-a.download="raport.csv";
-a.click();
-}
-
-function drawChart(){
-const c=document.getElementById("costChart");
-const ctx=c.getContext("2d");
-c.width=c.offsetWidth;c.height=180;
-ctx.clearRect(0,0,c.width,c.height);
-
-let costs=db.projects.map(p=>{
-let s=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{
-if(e.p===p)s+=e.h*db.workers[e.w].rate;
-}));
-return s;
-});
-
-let max=Math.max(...costs,1);
-let w=c.width/costs.length-10;
-
-costs.forEach((v,i)=>{
-let h=v/max*(c.height-30);
-let x=i*(w+10)+5;
-let y=c.height-h;
-ctx.fillStyle="#6faf8e";
-ctx.fillRect(x,y,w,h);
-ctx.fillStyle="#333";
-ctx.fillText(v+" zł",x,y-4);
-ctx.fillText(db.projects[i],x,c.height-4);
-});
-}
-
-function drawMonthChart(){
-const c=document.getElementById("monthChart");
-const ctx=c.getContext("2d");
-c.width=c.offsetWidth;c.height=180;
-ctx.clearRect(0,0,c.width,c.height);
-
-let map={};
-Object.keys(db.entries).forEach(k=>{
-let m=k.slice(0,7);
-map[m]=map[m]||0;
-db.entries[k].forEach(e=>map[m]+=e.h*db.workers[e.w].rate);
-});
-
-let months=Object.keys(map).sort();
-let vals=months.map(m=>map[m]);
-let max=Math.max(...vals,1);
-let step=c.width/(vals.length||1);
-
-vals.forEach((v,i)=>{
-let h=v/max*(c.height-30);
-ctx.fillStyle="#6faf8e";
-ctx.fillRect(i*step+10,c.height-h,30,h);
-ctx.fillStyle="#333";
-ctx.fillText(v+" zł",i*step+10,c.height-h-4);
-ctx.fillText(months[i],i*step+10,c.height-4);
-});
+function nextMonth(){
+current.setMonth(current.getMonth()+1);
+selected=null;
+renderAll();
 }
 
 function renderAll(){
 renderCalendar();
+
 checks.innerHTML="";
-workers.innerHTML="";
-projects.innerHTML="";
-workerReport.innerHTML="";
-projectReport.innerHTML="";
 project.innerHTML="";
 advWorker.innerHTML="";
-
-db.workers.forEach((w,i)=>{
-checks.innerHTML+=`<label><input type="checkbox" value="${i}">${w.name}</label>`;
-advWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
-workers.innerHTML+=`
-<div class="row">
-<input value="${w.name}" onchange="w.name=this.value;save()">
-<input class="small" type="number" value="${w.rate}" onchange="w.rate=this.value;save()">
-</div>`;
-});
+dayEntries.innerHTML="";
+workerReport.innerHTML="";
 
 db.projects.forEach(p=>{
-projects.innerHTML+=`<div class="row">${p}</div>`;
 project.innerHTML+=`<option>${p}</option>`;
 });
 
 db.workers.forEach((w,i)=>{
-let byP={},total=0,cost=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{
-if(e.w===i){byP[e.p]=(byP[e.p]||0)+e.h;}
-}));
-let html=`<b>${w.name}</b><br>`;
-for(let p in byP){
-let h=byP[p];let c=h*w.rate;
-total+=h;cost+=c;
-html+=`${p}: ${h}h = ${c} zł<br>`;
-}
-cost-=w.advance;
-html+=`<b>Suma: ${total}h = ${cost} zł (zaliczki: ${w.advance})</b>`;
-workerReport.innerHTML+=`<div class="card">${html}</div>`;
+checks.innerHTML+=`<label><input type="checkbox" value="${i}">${w.name}</label>`;
+advWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
 });
 
-db.projects.forEach(p=>{
-let h=0,c=0,html=`<b>${p}</b><br>`;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{
-if(e.p===p){
-let cc=e.h*db.workers[e.w].rate;
-html+=`${db.workers[e.w].name}: ${e.h}h = ${cc} zł<br>`;
-h+=e.h;c+=cc;
-}
-}));
-html+=`<b>Suma: ${h}h = ${c} zł</b>`;
-projectReport.innerHTML+=`<div class="card">${html}</div>`;
+(db.entries[selected]||[]).forEach((e,i)=>{
+dayEntries.innerHTML+=`
+<div class="row">
+${db.workers[e.w].name} – ${e.h}h (${e.p})
+<span class="entry-remove" onclick="removeEntry(${i})">✕</span>
+</div>`;
 });
 
-drawChart();
-drawMonthChart();
+db.workers.forEach((w,i)=>{
+let h=0;
+Object.values(db.entries).forEach(d=>d.forEach(e=>{if(e.w===i)h+=e.h}));
+let pay=h*w.rate-w.advance;
+workerReport.innerHTML+=`
+<div class="card">
+<b>${w.name}</b><br>
+Godziny: ${h}h<br>
+Stawka: ${w.rate} zł<br>
+Zaliczki: ${w.advance} zł<br>
+<b>Do wypłaty: ${pay} zł</b>
+</div>`;
+});
 }
 
 renderAll();
 </script>
+
 </body>
 </html>
