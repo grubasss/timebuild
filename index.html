@@ -2,8 +2,8 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>TimeBuild PRO+ ERP</title>
 <meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TimeBuild PRO+ ERP</title>
 
 <style>
 body{margin:0;font-family:system-ui;background:#f3f4f6}
@@ -83,25 +83,34 @@ button{background:#6faf8e;color:white;font-weight:600;border:none}
 <div id="summary"></div>
 </div>
 
+<div class="card">
+<h3>📈 KPI firmy</h3>
+<div id="kpi"></div>
+</div>
+
+<div class="card">
+<h3>💰 Cashflow</h3>
+<div id="cashflow"></div>
 </div>
 
 <script>
-let db = JSON.parse(localStorage.getItem("TBPROPLUS")) || {
+let db=JSON.parse(localStorage.getItem("TBPRO"))||{
 workers:[],
 projects:[],
 entries:{}
 };
 
-const save=()=>localStorage.setItem("TBPROPLUS",JSON.stringify(db));
+const save=()=>localStorage.setItem("TBPRO",JSON.stringify(db));
 const key=d=>d.toISOString().slice(0,10);
-let current=new Date(),selected=null;
+let selected=null;
 
 const days=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
 weekdays.innerHTML=days.map(d=>`<div class="weekday">${d}</div>`).join("");
 
 function buildCalendar(){
 calendar.innerHTML="";
-let y=current.getFullYear(),m=current.getMonth();
+let now=new Date();
+let y=now.getFullYear(),m=now.getMonth();
 let first=new Date(y,m,1);
 let start=(first.getDay()+6)%7;
 let count=new Date(y,m+1,0).getDate();
@@ -133,13 +142,13 @@ hours.value="";save();render();
 function deleteDay(){delete db.entries[selected];save();render();}
 
 function addWorker(){
-db.workers.push({name:newWorker.value,rate:+newRate.value||0,adv:[],active:true});
+db.workers.push({name:newWorker.value,rate:+newRate.value||0,adv:[]});
 newWorker.value="";newRate.value="";
 save();render();
 }
 
 function addProject(){
-db.projects.push({name:newProject.value,active:true});
+db.projects.push(newProject.value);
 newProject.value="";
 save();render();
 }
@@ -162,32 +171,30 @@ dayList.innerHTML="";
 advances.innerHTML="";
 summary.innerHTML="";
 
-let todayK=key(new Date());
+let todayKey=key(new Date());
 let weekStart=new Date();weekStart.setDate(weekStart.getDate()-weekStart.getDay());
-let monthKey=todayK.slice(0,7);
+let monthKey=todayKey.slice(0,7);
 
-let kToday=0,kWeek=0,kMonth=0,kPay=0;
+let kToday=0,kWeek=0,kMonth=0,kPay=0,totalCost=0;
 
 db.workers.forEach((w,i)=>{
-if(w.active){
 worker.innerHTML+=`<option value="${i}">${w.name}</option>`;
 advWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
-}
 
 workers.innerHTML+=`
 <div class="row">
 <input value="${w.name}" onchange="w.name=this.value;save()">
-<input class="small" type="number" value="${w.rate}" onchange="w.rate=+this.value;save()">
-${w.active?`<span class="remove" onclick="w.active=false;save();render()">ARCHIWIZUJ</span>`:`<span class="badge">ARCHIWUM</span>`}
+<input class="small" value="${w.rate}" onchange="w.rate=+this.value;save()">
+<span class="remove" onclick="db.workers.splice(${i},1);save();render()">✖</span>
 </div>`;
 });
 
 db.projects.forEach((p,i)=>{
-if(p.active) project.innerHTML+=`<option>${p.name}</option>`;
+project.innerHTML+=`<option>${p}</option>`;
 projects.innerHTML+=`
 <div class="row">
-<input value="${p.name}" onchange="p.name=this.value;save()">
-${p.active?`<span class="remove" onclick="p.active=false;save();render()">ARCHIWIZUJ</span>`:`<span class="badge">ARCHIWUM</span>`}
+<input value="${p}" onchange="db.projects[${i}]=this.value;save()">
+<span class="remove" onclick="db.projects.splice(${i},1);save();render()">✖</span>
 </div>`;
 });
 
@@ -207,7 +214,8 @@ arr.forEach(e=>{
 if(e.w===i){
 let cost=e.h*w.rate;
 total+=cost;
-if(d===todayK) kToday+=cost;
+totalCost+=cost;
+if(d===todayKey) kToday+=cost;
 if(new Date(d)>=weekStart){week+=cost;kWeek+=cost;}
 if(d.startsWith(monthKey)){month+=cost;kMonth+=cost;}
 }
@@ -237,10 +245,20 @@ ${w.name} — ${a.date}
 });
 
 kTodayEl=kToday;kWeekEl=kWeek;kMonthEl=kMonth;kPayEl=kPay;
+
 document.getElementById("kToday").textContent=kToday;
 document.getElementById("kWeek").textContent=kWeek;
 document.getElementById("kMonth").textContent=kMonth;
 document.getElementById("kPay").textContent=kPay;
+
+let daysWorked=new Set(Object.keys(db.entries));
+let avgDaily=daysWorked.size?Math.round(totalCost/daysWorked.size):0;
+let dayNow=new Date().getDate();
+let daysMonth=new Date(new Date().getFullYear(),new Date().getMonth()+1,0).getDate();
+let forecast=Math.round((totalCost/dayNow)*daysMonth);
+
+kpi.innerHTML=`Średnio dziennie: <b>${avgDaily} zł</b><br>Prognoza miesiąca: <b>${forecast} zł</b>`;
+cashflow.innerHTML=`Koszty: <b>${totalCost} zł</b> | Wypłaty realne: <b>${kPay} zł</b>`;
 }
 
 render();
