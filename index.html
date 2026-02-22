@@ -10,10 +10,9 @@
 --main:#6faf8e;
 --dark:#0f172a;
 --bg:#f3f4f6;
---card:#ffffff;
+--card:#fff;
 --border:#e5e7eb;
 }
-
 body{margin:0;font-family:system-ui;background:var(--bg)}
 header{background:#0f172a;color:white;padding:18px;font-size:22px;font-weight:600}
 .container{max-width:1200px;margin:auto;padding:18px}
@@ -59,20 +58,17 @@ border-radius:10px;
 border:1px solid var(--border);
 margin:6px 0;
 }
-
 button{background:var(--main);color:white;border:none;font-weight:600}
 
 .row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--border);padding:6px 0}
 .flex{display:flex;gap:8px;flex-wrap:wrap}
 .remove{color:red;cursor:pointer}
-canvas{width:100%;margin-top:10px}
+.small{width:80px}
 </style>
 </head>
 
 <body>
-
 <header>House Concept — TimeBuild Pro</header>
-
 <div class="container">
 
 <div class="tabs">
@@ -80,7 +76,6 @@ canvas{width:100%;margin-top:10px}
 <div class="tab" onclick="showTab('workersTab')">Pracownicy</div>
 <div class="tab" onclick="showTab('projectsTab')">Projekty</div>
 <div class="tab" onclick="showTab('advancesTab')">Zaliczki</div>
-<div class="tab" onclick="showTab('reportsTab')">Raporty</div>
 </div>
 
 <!-- KALENDARZ -->
@@ -95,15 +90,23 @@ canvas{width:100%;margin-top:10px}
 <div class="weekdays">
 <div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div>
 </div>
+
 <div class="calendar" id="calendar"></div>
 
 <div class="card">
-<h3>Dodaj godziny</h3>
+<h3>Godziny dnia</h3>
+
 <select id="workerSelect"></select>
 <select id="projectSelect"></select>
 <input id="hoursInput" type="number" placeholder="Godziny">
-<button onclick="addEntry()">Dodaj wpis</button>
+
+<div class="flex">
+<button onclick="addEntry()">Dodaj pojedynczo</button>
+<button onclick="addAll()">Dodaj wszystkim</button>
+</div>
+
 <div id="dayEntries"></div>
+<button onclick="deleteDay()" style="background:#dc2626">Usuń cały dzień</button>
 </div>
 
 </div>
@@ -137,30 +140,10 @@ canvas{width:100%;margin-top:10px}
 </div>
 </div>
 
-<!-- RAPORTY -->
-<div id="reportsTab" class="section">
-
-<div class="card">
-<h3>Koszty projektów</h3>
-<canvas id="projectChart" height="180"></canvas>
-</div>
-
-<div class="card">
-<h3>Koszty miesięczne</h3>
-<canvas id="monthChart" height="180"></canvas>
-</div>
-
-<div class="card">
-<h3>Rozliczenia</h3>
-<div id="reportList"></div>
-</div>
-
-</div>
-
 </div>
 
 <script>
-let db=JSON.parse(localStorage.getItem("tbProFull"))||{
+let db=JSON.parse(localStorage.getItem("tbFull"))||{
 workers:[
 {name:"Łukasz Nowak",rate:25,advances:[]},
 {name:"Ariel Walczak",rate:25,advances:[]},
@@ -172,8 +155,7 @@ entries:{}
 
 let current=new Date();
 let selected=null;
-
-const save=()=>localStorage.setItem("tbProFull",JSON.stringify(db));
+const save=()=>localStorage.setItem("tbFull",JSON.stringify(db));
 const key=d=>d.toISOString().slice(0,10);
 
 function showTab(id){
@@ -199,7 +181,6 @@ for(let i=1;i<=days;i++){
 let d=new Date(current.getFullYear(),current.getMonth(),i);
 let k=key(d);
 let sum=(db.entries[k]||[]).reduce((a,b)=>a+b.hours,0);
-
 let el=document.createElement("div");
 el.className="day"+(selected===k?" active":"")+(k===todayKey?" today":"")+([0,6].includes(d.getDay())?" weekend":"");
 el.innerHTML=`${i}<br>${sum||""}`;
@@ -220,13 +201,35 @@ hoursInput.value="";
 save();render();
 }
 
+function addAll(){
+if(!selected||!hoursInput.value) return;
+db.entries[selected]=db.entries[selected]||[];
+db.workers.forEach((w,i)=>{
+db.entries[selected].push({
+worker:i,
+project:projectSelect.value,
+hours:+hoursInput.value
+});
+});
+hoursInput.value="";
+save();render();
+}
+
+function deleteDay(){
+if(!selected) return;
+delete db.entries[selected];
+save();render();
+}
+
 function addWorker(){
-db.workers.push({name:newWorker.value,rate:+newRate.value,advances:[]});
+if(!newWorker.value.trim()) return;
+db.workers.push({name:newWorker.value,rate:+newRate.value||0,advances:[]});
 newWorker.value="";newRate.value="";
 save();render();
 }
 
 function addProject(){
+if(!newProject.value.trim()) return;
 db.projects.push(newProject.value);
 newProject.value="";
 save();render();
@@ -241,47 +244,6 @@ advAmount.value="";
 save();render();
 }
 
-function removeEntry(i){
-db.entries[selected].splice(i,1);
-save();render();
-}
-
-function removeItem(arr,i){arr.splice(i,1);save();render()}
-
-function prevMonth(){current.setMonth(current.getMonth()-1);selected=null;render()}
-function nextMonth(){current.setMonth(current.getMonth()+1);selected=null;render()}
-
-function drawCharts(){
-let pctx=projectChart.getContext("2d");
-pctx.clearRect(0,0,500,200);
-
-db.projects.forEach((p,i)=>{
-let cost=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{
-if(e.project===p) cost+=e.hours*db.workers[e.worker].rate;
-}));
-pctx.fillStyle="#6faf8e";
-pctx.fillRect(i*60,180-cost/5,40,cost/5);
-pctx.fillText(p,i*60,195);
-});
-
-let mctx=monthChart.getContext("2d");
-mctx.clearRect(0,0,500,200);
-
-let map={};
-Object.keys(db.entries).forEach(k=>{
-let m=k.slice(0,7);
-map[m]=map[m]||0;
-db.entries[k].forEach(e=>map[m]+=e.hours*db.workers[e.worker].rate);
-});
-
-Object.entries(map).forEach(([m,v],i)=>{
-mctx.fillStyle="#10b981";
-mctx.fillRect(i*60,180-v/5,40,v/5);
-mctx.fillText(m,i*60,195);
-});
-}
-
 function render(){
 renderCalendar();
 workerSelect.innerHTML="";
@@ -291,51 +253,45 @@ projectList.innerHTML="";
 dayEntries.innerHTML="";
 advWorker.innerHTML="";
 advanceHistory.innerHTML="";
-reportList.innerHTML="";
 
 db.workers.forEach((w,i)=>{
 workerSelect.innerHTML+=`<option value="${i}">${w.name}</option>`;
 advWorker.innerHTML+=`<option value="${i}">${w.name}</option>`;
 workerList.innerHTML+=`
-<div class="row">${w.name} (${w.rate} zł/h)
-<span class="remove" onclick="removeItem(db.workers,${i})">❌</span>
+<div class="row">
+<input value="${w.name}" onchange="db.workers[${i}].name=this.value;save();render()">
+<input class="small" type="number" value="${w.rate}" onchange="db.workers[${i}].rate=+this.value;save();render()">
+<span class="remove" onclick="db.workers.splice(${i},1);save();render()">❌</span>
 </div>`;
 });
 
 db.projects.forEach((p,i)=>{
 projectSelect.innerHTML+=`<option>${p}</option>`;
 projectList.innerHTML+=`
-<div class="row">${p}
-<span class="remove" onclick="removeItem(db.projects,${i})">❌</span>
+<div class="row">
+<input value="${p}" onchange="db.projects[${i}]=this.value;save();render()">
+<span class="remove" onclick="db.projects.splice(${i},1);save();render()">❌</span>
 </div>`;
 });
 
 (db.entries[selected]||[]).forEach((e,i)=>{
 dayEntries.innerHTML+=`
 <div class="row">
-${db.workers[e.worker].name} – ${e.project} – ${e.hours}h
-<span class="remove" onclick="removeEntry(${i})">❌</span>
+${db.workers[e.worker].name} – ${e.project}
+<input class="small" type="number" value="${e.hours}"
+ onchange="db.entries[selected][${i}].hours=+this.value;save();render()"> h
+<span class="remove" onclick="db.entries[selected].splice(${i},1);save();render()">❌</span>
 </div>`;
 });
 
 db.workers.forEach((w,i)=>{
-let h=0,c=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{
-if(e.worker===i){h+=e.hours;c+=e.hours*w.rate}
-}));
-let adv=w.advances.reduce((s,a)=>s+a.amount,0);
-reportList.innerHTML+=`${w.name}: ${h}h = ${c-adv} zł<br>`;
-
 w.advances.forEach(a=>{
 advanceHistory.innerHTML+=`${w.name} ${a.date.slice(0,10)} – ${a.amount} zł<br>`;
 });
 });
-
-drawCharts();
 }
 
 render();
 </script>
-
 </body>
 </html>
