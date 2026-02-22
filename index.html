@@ -12,7 +12,8 @@
 }
 .dark{--bg:#0f172a;--card:#1e293b;--soft:#24324a;--text:#e5e7eb;--weekend:#3a1f2b}
 body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
-header{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
+header{display:flex;justify-content:space-between;align-items:center;
+background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
 .logo{height:42px;background:white;padding:6px;border-radius:12px}
 .container{max-width:1200px;margin:auto;padding:16px}
 .card{background:var(--card);padding:16px;border-radius:18px;margin:14px 0;box-shadow:0 8px 22px rgba(0,0,0,.12)}
@@ -25,7 +26,9 @@ header{display:flex;justify-content:space-between;align-items:center;background:
 .day small{opacity:.6;font-size:12px}
 button,input,select{padding:8px;border-radius:10px;border:1px solid #ccc;margin:4px;width:100%}
 button{background:var(--main);color:white;font-weight:700;border:none}
-.row{display:flex;justify-content:space-between;border-bottom:1px solid var(--soft);padding:6px 0}
+.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--soft);padding:6px 0;gap:6px}
+.small{width:90px}
+.remove{color:var(--danger);font-weight:800;cursor:pointer}
 #lock{position:fixed;inset:0;background:#0f172a;color:white;display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:9999}
 </style>
 </head>
@@ -49,7 +52,7 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 <div class="container">
 
 <div class="card">
-<b>Statystyki globalne</b>
+<b>Statystyki</b>
 <div>Zarobione: <span id="earnedStat">0</span> zł</div>
 <div>Zaliczki: <span id="advanceStat">0</span> zł</div>
 <div><b>Do wypłaty: <span id="toPayStat">0</span> zł</b></div>
@@ -65,13 +68,18 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 </div>
 
 <div class="card">
-<h3>📊 Raport miesięczny</h3>
+<h3>📊 Raport miesięczny – pracownicy</h3>
 <select id="reportMonth"></select>
-<div id="reportTable"></div>
+<div id="reportWorkers"></div>
 </div>
 
 <div class="card">
-<h3>📈 Analityka</h3>
+<h3>🏗 Raport miesięczny – projekty</h3>
+<div id="reportProjects"></div>
+</div>
+
+<div class="card">
+<h3>📈 Analityka firmy</h3>
 <div id="analytics"></div>
 </div>
 
@@ -128,7 +136,7 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 </div>
 
 <div class="card">
-<h3>📊 Rozliczenia</h3>
+<h3>📊 Wypłaty</h3>
 <div id="payouts"></div>
 </div>
 
@@ -136,26 +144,19 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 
 <script>
 const PIN="1234";
-
-let db=JSON.parse(localStorage.getItem("ERP_COMPLETE_PLUS"))||{
-workers:[],projects:[],entries:[],advances:[]
-};
-
+let db=JSON.parse(localStorage.getItem("ERP_COMPLETE_PLUS"))||{workers:[],projects:[],entries:[],advances:[]};
 let reminder=JSON.parse(localStorage.getItem("REMINDER"))||{mode:"monthly",hour:17,last:null};
-
 const save=()=>localStorage.setItem("ERP_COMPLETE_PLUS",JSON.stringify(db));
 const uid=()=>crypto.randomUUID();
-
-let cur=new Date(),selected=null;
-const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 const dayNames=["Nd","Pn","Wt","Śr","Cz","Pt","Sb"];
 const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
+let cur=new Date(),selected=null;
+const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
 
-function login(){if(pin.value===PIN) lock.style.display="none"; else alert("Zły PIN")}
-function toggleDark(){document.body.classList.toggle("dark")}
-
-function moveMonth(n){cur.setMonth(cur.getMonth()+n);render()}
-function selectDay(k){selected=k;render()}
+function login(){if(pin.value===PIN)lock.style.display="none";}
+function toggleDark(){document.body.classList.toggle("dark");}
+function moveMonth(n){cur.setMonth(cur.getMonth()+n);render();}
+function selectDay(k){selected=k;render();}
 
 function buildCalendar(){
 calendar.innerHTML="";
@@ -172,42 +173,11 @@ ${db.entries.some(e=>e.date===k)?'<div class="dot"></div>':''}
 }
 }
 
-function addWorker(){db.workers.push({id:uid(),name:wName.value,rate:+wRate.value});wName.value=wRate.value="";save();render()}
-function addProject(){db.projects.push({id:uid(),name:pName.value});pName.value="";save();render()}
-function addEntry(){if(!selected)return;db.entries.push({id:uid(),date:selected,worker:entryWorker.value,project:entryProject.value,hours:+entryHours.value});entryHours.value="";save();render()}
-function addEntryAll(){if(!selected||!entryHours.value)return;db.workers.forEach(w=>db.entries.push({id:uid(),date:selected,worker:w.id,project:entryProject.value,hours:+entryHours.value}));entryHours.value="";save();render()}
-function addAdvance(){db.advances.push({id:uid(),worker:advWorker.value,date:key(new Date()),amount:+advAmount.value});advAmount.value="";save();render()}
-
-function buildReport(){
-let months=[...new Set(db.entries.map(e=>e.date.slice(0,7)))];
-reportMonth.innerHTML=months.map(m=>`<option>${m}</option>`).join("");
-}
-
-reportMonth.onchange=()=>render();
-
-function analytics(){
-let hours=0,earned=0,adv=0;
-db.entries.forEach(e=>{hours+=e.hours;earned+=e.hours*rate(e.worker)});
-db.advances.forEach(a=>adv+=a.amount);
-analytics.innerHTML=`
-<div>Godziny: ${hours}</div>
-<div>Zarobione: ${earned} zł</div>
-<div>Zaliczki: ${adv} zł</div>
-<b>Do wypłaty: ${earned-adv} zł</b>`;
-}
-
-function checkReminder(){
-let now=new Date();
-if(now.getHours()!=reminder.hour) return;
-let t=now.toDateString();
-if(reminder.last===t) return;
-if(reminder.mode==="weekly" && now.getDay()!=1) return;
-alert("💸 Przypomnienie: wypłaty do sprawdzenia!");
-reminder.last=t;
-localStorage.setItem("REMINDER",JSON.stringify(reminder));
-}
-
-setInterval(checkReminder,60000);
+function addWorker(){db.workers.push({id:uid(),name:wName.value,rate:+wRate.value});wName.value=wRate.value="";save();render();}
+function addProject(){db.projects.push({id:uid(),name:pName.value});pName.value="";save();render();}
+function addEntry(){if(!selected)return;db.entries.push({id:uid(),date:selected,worker:entryWorker.value,project:entryProject.value,hours:+entryHours.value});entryHours.value="";save();render();}
+function addEntryAll(){if(!selected||!entryHours.value)return;db.workers.forEach(w=>db.entries.push({id:uid(),date:selected,worker:w.id,project:entryProject.value,hours:+entryHours.value}));entryHours.value="";save();render();}
+function addAdvance(){db.advances.push({id:uid(),worker:advWorker.value,date:key(new Date()),amount:+advAmount.value});advAmount.value="";save();render();}
 
 function saveReminder(){
 reminder.mode=remMode.value;
@@ -216,6 +186,18 @@ localStorage.setItem("REMINDER",JSON.stringify(reminder));
 remInfo.textContent="Zapisano ✔";
 }
 
+function checkReminder(){
+let now=new Date();
+if(now.getHours()!=reminder.hour) return;
+let t=now.toDateString();
+if(reminder.last===t) return;
+if(reminder.mode==="weekly" && now.getDay()!=1) return;
+alert("💸 Przypomnienie: sprawdź wypłaty!");
+reminder.last=t;
+localStorage.setItem("REMINDER",JSON.stringify(reminder));
+}
+setInterval(checkReminder,60000);
+
 function manualBackup(){
 const blob=new Blob([JSON.stringify(db)],{type:"application/json"});
 const a=document.createElement("a");
@@ -223,63 +205,78 @@ a.href=URL.createObjectURL(blob);
 a.download="erp-backup.json";
 a.click();
 }
-
 function restore(input){
 const r=new FileReader();
-r.onload=e=>{db=JSON.parse(e.target.result);save();render()}
+r.onload=e=>{db=JSON.parse(e.target.result);save();render();}
 r.readAsText(input.files[0]);
 }
 
 function render(){
 buildCalendar();
-buildReport();
-analytics();
-
 workers.innerHTML=projects.innerHTML=entries.innerHTML=advances.innerHTML=payouts.innerHTML="";
 entryWorker.innerHTML=entryProject.innerHTML=advWorker.innerHTML="";
 
 db.workers.forEach(w=>{
-workers.innerHTML+=`<div class="row">${w.name} ${w.rate} zł</div>`;
+workers.innerHTML+=`<div class="row">
+<input value="${w.name}" oninput="w.name=this.value;save()">
+<input class="small" value="${w.rate}" oninput="w.rate=+this.value;save()">
+<span class="remove" onclick="db.workers=db.workers.filter(x=>x.id!='${w.id}');save();render()">✖</span>
+</div>`;
 entryWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
 advWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
 });
 
 db.projects.forEach(p=>{
-projects.innerHTML+=`<div class="row">${p.name}</div>`;
+projects.innerHTML+=`<div class="row">
+<input value="${p.name}" oninput="p.name=this.value;save()">
+<span class="remove" onclick="db.projects=db.projects.filter(x=>x.id!='${p.id}');save();render()">✖</span>
+</div>`;
 entryProject.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
 });
 
 db.entries.filter(e=>e.date===selected).forEach(e=>{
-entries.innerHTML+=`<div class="row">${db.workers.find(w=>w.id===e.worker)?.name} ${e.hours}h</div>`;
+entries.innerHTML+=`<div class="row">${db.workers.find(w=>w.id===e.worker)?.name}
+<input class="small" value="${e.hours}" oninput="e.hours=+this.value;save();render()"></div>`;
 });
 
 db.advances.forEach(a=>{
-advances.innerHTML+=`<div class="row">${db.workers.find(w=>w.id===a.worker)?.name} ${a.amount} zł</div>`;
+advances.innerHTML+=`<div class="row">${db.workers.find(w=>w.id===a.worker)?.name}
+<input class="small" value="${a.amount}" oninput="a.amount=+this.value;save();render()"></div>`;
 });
 
 let totalEarned=0,totalAdv=0;
+payouts.innerHTML="";
 db.workers.forEach(w=>{
 let earned=db.entries.filter(e=>e.worker===w.id).reduce((s,e)=>s+e.hours*w.rate,0);
 let adv=db.advances.filter(a=>a.worker===w.id).reduce((s,a)=>s+a.amount,0);
 totalEarned+=earned; totalAdv+=adv;
 payouts.innerHTML+=`<div class="row">${w.name}: ${earned-adv} zł</div>`;
 });
-
 earnedStat.textContent=totalEarned;
 advanceStat.textContent=totalAdv;
 toPayStat.textContent=totalEarned-totalAdv;
 
+analytics.innerHTML=`Godziny: ${db.entries.reduce((s,e)=>s+e.hours,0)} | Zarobione: ${totalEarned} zł`;
+
+let months=[...new Set(db.entries.map(e=>e.date.slice(0,7)))];
+reportMonth.innerHTML=months.map(m=>`<option>${m}</option>`).join("");
+
 let m=reportMonth.value;
+reportWorkers.innerHTML="";
+reportProjects.innerHTML="";
+
 if(m){
-let html="<div class='row'><b>Pracownik</b><b>Do wypłaty</b></div>";
 db.workers.forEach(w=>{
-let earned=db.entries.filter(e=>e.worker===w.id && e.date.startsWith(m))
-.reduce((s,e)=>s+e.hours*w.rate,0);
-let adv=db.advances.filter(a=>a.worker===w.id && a.date.startsWith(m))
-.reduce((s,a)=>s+a.amount,0);
-html+=`<div class='row'><span>${w.name}</span><span>${earned-adv}</span></div>`;
+let sum=db.entries.filter(e=>e.worker===w.id && e.date.startsWith(m)).reduce((s,e)=>s+e.hours*w.rate,0);
+let adv=db.advances.filter(a=>a.worker===w.id && a.date.startsWith(m)).reduce((s,a)=>s+a.amount,0);
+reportWorkers.innerHTML+=`<div class="row">${w.name}: ${sum-adv} zł</div>`;
 });
-reportTable.innerHTML=html;
+
+db.projects.forEach(p=>{
+let cost=db.entries.filter(e=>e.project===p.id && e.date.startsWith(m))
+.reduce((s,e)=>s+e.hours*rate(e.worker),0);
+reportProjects.innerHTML+=`<div class="row">${p.name}: ${cost} zł</div>`;
+});
 }
 }
 
