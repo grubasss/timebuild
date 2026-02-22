@@ -5,37 +5,110 @@
 <title>TimeBuild Pro ERP</title>
 
 <style>
-body{margin:0;font-family:system-ui;background:#f3f4f6}
-header{background:#0f172a;color:white;padding:18px;font-size:22px}
+:root{
+--main:#6faf8e;
+--dark:#0f172a;
+--bg:#f3f4f6;
+--card:#fff;
+--border:#e5e7eb;
+}
+
+body{margin:0;font-family:system-ui;background:var(--bg)}
+header{background:var(--dark);color:white;padding:18px;font-size:22px}
+
 .container{max-width:1400px;margin:auto;padding:16px}
-.card{background:white;padding:18px;border-radius:16px;margin:16px 0;box-shadow:0 6px 16px rgba(0,0,0,.08)}
-.grid7{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.day{background:white;padding:10px;border-radius:12px;text-align:center;cursor:pointer}
-.day.active{outline:3px solid #6faf8e}
-.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:6px}
-button,input,select{padding:8px;border-radius:10px;border:1px solid #ddd;width:100%;margin:4px}
-button{background:#6faf8e;color:white;font-weight:600;border:none}
-.flex{display:flex;gap:6px;flex-wrap:wrap}
+
+.card{
+background:white;
+padding:18px;
+border-radius:16px;
+margin:16px 0;
+box-shadow:0 6px 16px rgba(0,0,0,.08)
+}
+
+.calendar-wrap{
+display:grid;
+grid-template-columns:repeat(7,1fr);
+gap:6px
+}
+
+.weekday{
+font-weight:700;
+text-align:center;
+padding:6px
+}
+
+.day{
+background:white;
+border-radius:12px;
+padding:10px;
+text-align:center;
+cursor:pointer;
+box-shadow:0 2px 6px rgba(0,0,0,.05);
+}
+
+.day.today{
+background:#dcfce7;
+font-weight:700
+}
+
+.day.active{
+outline:3px solid var(--main)
+}
+
+.day.empty{
+background:transparent;
+box-shadow:none;
+cursor:default
+}
+
+.row{
+display:flex;
+justify-content:space-between;
+align-items:center;
+border-bottom:1px solid var(--border);
+padding:6px 0
+}
+
+button,input,select{
+padding:8px;
+border-radius:10px;
+border:1px solid var(--border);
+margin:4px;
+width:100%
+}
+
+button{
+background:var(--main);
+color:white;
+border:none;
+font-weight:600
+}
+
+.flex{
+display:flex;
+gap:6px;
+flex-wrap:wrap
+}
+
 .small{width:90px}
-.remove{color:red;cursor:pointer}
-.badge{background:#e5e7eb;padding:2px 6px;border-radius:6px;font-size:12px}
-canvas{width:100%;height:220px}
-.stat{font-size:20px;font-weight:700}
+
+.remove{
+color:#dc2626;
+cursor:pointer;
+font-weight:700
+}
 </style>
 </head>
 
 <body>
-<header>TimeBuild Pro — Professional ERP</header>
+<header>TimeBuild Pro — ERP</header>
 <div class="container">
 
-<div class="card flex">
-<div>Dziś: <span id="today" class="stat"></span> zł</div>
-<div>Tydzień: <span id="week" class="stat"></span> zł</div>
-<div>Miesiąc: <span id="month" class="stat"></span> zł</div>
-<div>Do wypłaty: <span id="pay" class="stat"></span> zł</div>
+<div class="card">
+<div class="calendar-wrap" id="weekdays"></div>
+<div class="calendar-wrap" id="calendar"></div>
 </div>
-
-<div class="card"><div id="calendar" class="grid7"></div></div>
 
 <div class="card">
 <select id="worker"></select>
@@ -66,30 +139,12 @@ canvas{width:100%;height:220px}
 <div id="projects"></div>
 </div>
 
-<div class="card">
-<h3>💸 Zaliczki</h3>
-<select id="advWorker"></select>
-<input id="advAmount" type="number" placeholder="Kwota">
-<button onclick="addAdvance()">Dodaj</button>
-<div id="advHistory"></div>
-</div>
-
-<div class="card">
-<h3>📄 Rozliczenia</h3>
-<div id="summary"></div>
-</div>
-
 </div>
 
 <script>
 let db=JSON.parse(localStorage.getItem("TBPRO"))||{
-workers:[
-{id:1,name:"Łukasz",rate:25,active:true,adv:[]},
-{id:2,name:"Ariel",rate:25,active:true,adv:[]}
-],
-projects:[
-{id:1,name:"Dom Wola",active:true}
-],
+workers:[],
+projects:[],
 entries:{}
 };
 
@@ -97,60 +152,74 @@ let selected=null;
 const save=()=>localStorage.setItem("TBPRO",JSON.stringify(db));
 const key=d=>d.toISOString().slice(0,10);
 
+const weekdays=["Pn","Wt","Śr","Cz","Pt","Sb","Nd"];
+weekdays.forEach(d=>weekdaysEl=document.getElementById("weekdays").innerHTML+=`<div class="weekday">${d}</div>`);
+
 function buildCalendar(){
 calendar.innerHTML="";
-let now=new Date(),y=now.getFullYear(),m=now.getMonth();
+let now=new Date();
+let y=now.getFullYear();
+let m=now.getMonth();
+
+let first=new Date(y,m,1);
+let start=(first.getDay()+6)%7;
 let days=new Date(y,m+1,0).getDate();
-for(let i=1;i<=days;i++){
-let d=new Date(y,m,i),k=key(d);
-let sum=(db.entries[k]||[]).reduce((a,b)=>a+b.h,0);
-let el=document.createElement("div");
-el.className="day"+(selected===k?" active":"");
-el.innerHTML=i+"<br>"+(sum||"");
-el.onclick=()=>{selected=k;render()};
-calendar.appendChild(el);
+let todayKey=key(new Date());
+
+for(let i=0;i<start;i++){
+calendar.innerHTML+=`<div class="day empty"></div>`;
 }
+
+for(let i=1;i<=days;i++){
+let d=new Date(y,m,i);
+let k=key(d);
+let sum=(db.entries[k]||[]).reduce((a,b)=>a+b.h,0);
+
+let cls="day";
+if(k===todayKey) cls+=" today";
+if(k===selected) cls+=" active";
+
+calendar.innerHTML+=`
+<div class="${cls}" onclick="selectDay('${k}')">
+${i}<br>${sum||""}
+</div>`;
+}
+}
+
+function selectDay(k){
+selected=k;
+render();
 }
 
 function addEntry(all){
 if(!selected||!hours.value) return;
 db.entries[selected]=db.entries[selected]||[];
 if(all){
-db.workers.filter(w=>w.active).forEach(w=>{
-db.entries[selected].push({w:w.id,p:+project.value,h:+hours.value});
+db.workers.forEach((_,i)=>{
+db.entries[selected].push({w:i,p:project.value,h:+hours.value});
 });
 }else{
-db.entries[selected].push({w:+worker.value,p:+project.value,h:+hours.value});
+db.entries[selected].push({w:+worker.value,p:project.value,h:+hours.value});
 }
-hours.value="";save();render();
+hours.value="";
+save();render();
 }
 
-function deleteDay(){delete db.entries[selected];save();render();}
+function deleteDay(){
+delete db.entries[selected];
+save();render();
+}
 
 function addWorker(){
-db.workers.push({
-id:Date.now(),
-name:newWorker.value,
-rate:+newRate.value,
-active:true,
-adv:[]
-});
-newWorker.value="";newRate.value="";save();render();
+db.workers.push({name:newWorker.value,rate:+newRate.value});
+newWorker.value="";newRate.value="";
+save();render();
 }
 
 function addProject(){
-db.projects.push({
-id:Date.now(),
-name:newProject.value,
-active:true
-});
-newProject.value="";save();render();
-}
-
-function addAdvance(){
-let w=db.workers.find(x=>x.id==advWorker.value);
-w.adv.push({date:new Date().toLocaleString("pl-PL"),amount:+advAmount.value});
-advAmount.value="";save();render();
+db.projects.push(newProject.value);
+newProject.value="";
+save();render();
 }
 
 function render(){
@@ -158,84 +227,37 @@ buildCalendar();
 
 worker.innerHTML="";
 project.innerHTML="";
-advWorker.innerHTML="";
 workers.innerHTML="";
 projects.innerHTML="";
 dayList.innerHTML="";
-advHistory.innerHTML="";
-summary.innerHTML="";
 
-let todayKey=key(new Date());
-let weekStart=new Date();weekStart.setDate(weekStart.getDate()-weekStart.getDay());
-let today=0,week=0,month=0,pay=0;
-
-db.workers.forEach(w=>{
-if(w.active){
-worker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
-advWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
-}
-
+db.workers.forEach((w,i)=>{
+worker.innerHTML+=`<option value="${i}">${w.name}</option>`;
 workers.innerHTML+=`
 <div class="row">
-<input value="${w.name}" onchange="w.name=this.value;save()">
-<input class="small" type="number" value="${w.rate}" onchange="w.rate=+this.value;save()">
-${w.active?`<span class="remove" onclick="w.active=false;save();render()">ARCHIWIZUJ</span>`:`<span class="badge">ARCHIWUM</span>`}
+<input value="${w.name}" onchange="db.workers[${i}].name=this.value;save()">
+<input class="small" type="number" value="${w.rate}" onchange="db.workers[${i}].rate=+this.value;save()">
+<span class="remove" onclick="db.workers.splice(${i},1);save();render()">✖</span>
 </div>`;
 });
 
-db.projects.forEach(p=>{
-if(p.active) project.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
-
+db.projects.forEach((p,i)=>{
+project.innerHTML+=`<option>${p}</option>`;
 projects.innerHTML+=`
 <div class="row">
-<input value="${p.name}" onchange="p.name=this.value;save()">
-${p.active?`<span class="remove" onclick="p.active=false;save();render()">ARCHIWIZUJ</span>`:`<span class="badge">ARCHIWUM</span>`}
+<input value="${p}" onchange="db.projects[${i}]=this.value;save()">
+<span class="remove" onclick="db.projects.splice(${i},1);save();render()">✖</span>
 </div>`;
 });
 
 (db.entries[selected]||[]).forEach((e,i)=>{
-let w=db.workers.find(x=>x.id===e.w);
-let p=db.projects.find(x=>x.id===e.p);
 dayList.innerHTML+=`
 <div class="row">
-${w?.name||"archiwum"} – ${p?.name||"archiwum"}
-<input class="small" value="${e.h}" onchange="db.entries[selected][${i}].h=+this.value;save();render()"> h
-<span class="remove" onclick="db.entries[selected].splice(${i},1);save();render()">❌</span>
+${db.workers[e.w]?.name} – ${e.p}
+<input class="small" value="${e.h}" onchange="db.entries[selected][${i}].h=+this.value;save();render()">h
+<span class="remove" onclick="db.entries[selected].splice(${i},1);save();render()">✖</span>
 </div>`;
 });
-
-Object.entries(db.entries).forEach(([d,arr])=>{
-arr.forEach(e=>{
-let w=db.workers.find(x=>x.id===e.w);
-if(!w) return;
-let cost=e.h*w.rate;
-if(d===todayKey) today+=cost;
-if(new Date(d)>=weekStart) week+=cost;
-if(d.slice(0,7)===todayKey.slice(0,7)) month+=cost;
-});
-});
-
-db.workers.forEach(w=>{
-let sum=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{
-if(e.w===w.id) sum+=e.h*w.rate;
-}));
-let adv=w.adv.reduce((s,a)=>s+a.amount,0);
-pay+=sum-adv;
-
-summary.innerHTML+=`
-<b>${w.name}</b> → ${sum-adv} zł (zaliczki ${adv})<br>
-`;
-
-w.adv.forEach(a=>{
-advHistory.innerHTML+=`${w.name} — ${a.date} — ${a.amount} zł<br>`;
-});
-});
-
-document.getElementById("today").textContent=today;
-document.getElementById("week").textContent=week;
-document.getElementById("month").textContent=month;
-document.getElementById("pay").textContent=pay;
 }
 
 render();
