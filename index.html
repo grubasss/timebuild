@@ -7,18 +7,19 @@
 
 <style>
 body{margin:0;font-family:system-ui;background:#f4f7f6}
-header{background:#2f4f4f;color:white;padding:14px;display:flex;gap:10px;align-items:center}
+header{background:#2f4f4f;color:white;padding:14px}
 .container{max-width:1100px;margin:auto;padding:14px}
-.calendar{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.calendar,.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.weekdays{font-weight:600;text-align:center}
 .day{background:white;border-radius:8px;padding:6px;font-size:12px;text-align:center;cursor:pointer}
 .day.active{outline:2px solid #6faf8e}
-.weekdays{display:grid;grid-template-columns:repeat(7,1fr);font-weight:600;text-align:center}
 .card{background:white;padding:14px;border-radius:14px;margin:12px 0}
-.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #eee;padding:4px 0}
-input,select,button{padding:6px;border-radius:6px;border:1px solid #ccc;margin:4px 0;width:100%}
+.row{display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:4px 0}
+button,input,select{padding:6px;border-radius:6px;border:1px solid #ccc;margin:4px 0;width:100%}
 button{background:#6faf8e;color:white;border:none;font-weight:600}
 .flex{display:flex;gap:6px;flex-wrap:wrap}
-.small{width:70px}
+.small{width:80px}
+canvas{width:100%}
 </style>
 </head>
 
@@ -40,7 +41,6 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 
 <div class="card">
 <h3>Dzień pracy</h3>
-
 <select id="project"></select>
 <input id="hours" type="number" placeholder="Godziny">
 
@@ -58,7 +58,11 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 <button onclick="quick(12)">12h</button>
 <button onclick="markOff()">Wolne</button>
 </div>
+</div>
 
+<div class="card">
+<h3>📈 Koszty projektów</h3>
+<canvas id="costChart" height="180"></canvas>
 </div>
 
 <div class="card">
@@ -74,9 +78,19 @@ button{background:#6faf8e;color:white;border:none;font-weight:600}
 </div>
 
 <div class="card">
-<h3>Raport miesięczny</h3>
-<div id="summary"></div>
-<button onclick="exportCSV()">Eksport Excel</button>
+<h3>Rozliczenie pracowników</h3>
+<div id="workerReport"></div>
+</div>
+
+<div class="card">
+<h3>Rozliczenie projektów</h3>
+<div id="projectReport"></div>
+</div>
+
+<div class="card">
+<button onclick="backup()">Backup danych</button>
+<input type="file" onchange="restore(event)">
+<button onclick="exportCSV()">Excel</button>
 </div>
 
 </div>
@@ -119,7 +133,7 @@ calendar.appendChild(el);
 }
 
 function addAll(){
-db.entries[selected]=[];
+db.entries[selected]=db.entries[selected]||[];
 db.workers.forEach((w,i)=>{
 db.entries[selected].push({w:i,p:project.value,h:+hours.value});
 });
@@ -127,7 +141,7 @@ save();renderAll();
 }
 
 function addSelected(){
-db.entries[selected]=[];
+db.entries[selected]=db.entries[selected]||[];
 document.querySelectorAll("#checks input:checked").forEach(c=>{
 db.entries[selected].push({w:+c.value,p:project.value,h:+hours.value});
 });
@@ -135,32 +149,44 @@ save();renderAll();
 }
 
 function quick(h){hours.value=h}
-
 function copyYesterday(){
-let d=new Date(selected);
-d.setDate(d.getDate()-1);
-let y=key(d);
-db.entries[selected]=JSON.parse(JSON.stringify(db.entries[y]||[]));
+let d=new Date(selected);d.setDate(d.getDate()-1);
+db.entries[selected]=JSON.parse(JSON.stringify(db.entries[key(d)]||[]));
 save();renderAll();
 }
-
 function markOff(){db.entries[selected]=[];save();renderAll()}
 
-function addProject(){
-db.projects.push(newProject.value);
-newProject.value="";
-save();renderAll();
-}
-
+function addProject(){db.projects.push(newProject.value);newProject.value="";save();renderAll()}
 function prevMonth(){current.setMonth(current.getMonth()-1);renderAll()}
 function nextMonth(){current.setMonth(current.getMonth()+1);renderAll()}
 
+function backup(){
+let b=new Blob([JSON.stringify(db)],{type:"application/json"});
+let a=document.createElement("a");
+a.href=URL.createObjectURL(b);
+a.download="backup.json";
+a.click();
+}
+
+function restore(e){
+let r=new FileReader();
+r.onload=()=>{db=JSON.parse(r.result);save();renderAll()};
+r.readAsText(e.target.files[0]);
+}
+
 function exportCSV(){
-let rows=["Pracownik,Godziny,Koszt"];
+let rows=["Typ,Nazwa,Godziny,Koszt"];
 db.workers.forEach((w,i)=>{
 let h=0;
 Object.values(db.entries).forEach(d=>d.forEach(e=>{if(e.w===i)h+=e.h}));
-rows.push(`${w.name},${h},${h*w.rate}`);
+rows.push(`Pracownik,${w.name},${h},${h*w.rate}`);
+});
+db.projects.forEach(p=>{
+let h=0,c=0;
+Object.values(db.entries).forEach(d=>d.forEach(e=>{
+if(e.p===p){h+=e.h;c+=e.h*db.workers[e.w].rate}
+}));
+rows.push(`Projekt,${p},${h},${c}`);
 });
 let blob=new Blob([rows.join("\n")],{type:"text/csv"});
 let a=document.createElement("a");
@@ -169,12 +195,42 @@ a.download="raport.csv";
 a.click();
 }
 
+function drawChart(){
+const c=document.getElementById("costChart");
+const ctx=c.getContext("2d");
+c.width=c.offsetWidth;c.height=180;
+ctx.clearRect(0,0,c.width,c.height);
+
+let costs=db.projects.map(p=>{
+let s=0;
+Object.values(db.entries).forEach(d=>d.forEach(e=>{
+if(e.p===p)s+=e.h*db.workers[e.w].rate;
+}));
+return s;
+});
+
+let max=Math.max(...costs,1);
+let w=c.width/costs.length-10;
+
+costs.forEach((v,i)=>{
+let h=v/max*(c.height-30);
+let x=i*(w+10)+5;
+let y=c.height-h;
+ctx.fillStyle="#6faf8e";
+ctx.fillRect(x,y,w,h);
+ctx.fillStyle="#333";
+ctx.fillText(v+" zł",x,y-4);
+ctx.fillText(db.projects[i],x,c.height-4);
+});
+}
+
 function renderAll(){
 renderCalendar();
 checks.innerHTML="";
 workers.innerHTML="";
 projects.innerHTML="";
-summary.innerHTML="";
+workerReport.innerHTML="";
+projectReport.innerHTML="";
 project.innerHTML="";
 
 db.workers.forEach((w,i)=>{
@@ -186,16 +242,40 @@ workers.innerHTML+=`
 </div>`;
 });
 
-db.projects.forEach((p,i)=>{
+db.projects.forEach(p=>{
 projects.innerHTML+=`<div class="row">${p}</div>`;
 project.innerHTML+=`<option>${p}</option>`;
 });
 
 db.workers.forEach((w,i)=>{
-let h=0;
-Object.values(db.entries).forEach(d=>d.forEach(e=>{if(e.w===i)h+=e.h}));
-summary.innerHTML+=`<div class="row">${w.name}: ${h}h = ${h*w.rate} zł</div>`;
+let byP={},total=0,cost=0;
+Object.values(db.entries).forEach(d=>d.forEach(e=>{
+if(e.w===i){byP[e.p]=(byP[e.p]||0)+e.h;}
+}));
+let html=`<b>${w.name}</b><br>`;
+for(let p in byP){
+let h=byP[p];let c=h*w.rate;
+total+=h;cost+=c;
+html+=`${p}: ${h}h = ${c} zł<br>`;
+}
+html+=`<b>Suma: ${total}h = ${cost} zł</b>`;
+workerReport.innerHTML+=`<div class="card">${html}</div>`;
 });
+
+db.projects.forEach(p=>{
+let h=0,c=0,html=`<b>${p}</b><br>`;
+Object.values(db.entries).forEach(d=>d.forEach(e=>{
+if(e.p===p){
+let cc=e.h*db.workers[e.w].rate;
+html+=`${db.workers[e.w].name}: ${e.h}h = ${cc} zł<br>`;
+h+=e.h;c+=cc;
+}
+}));
+html+=`<b>Suma: ${h}h = ${c} zł</b>`;
+projectReport.innerHTML+=`<div class="card">${html}</div>`;
+});
+
+drawChart();
 }
 
 renderAll();
