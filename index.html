@@ -25,24 +25,10 @@
 }
 
 body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
-
-header{
-display:flex;justify-content:space-between;align-items:center;
-background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px
-}
-
+header{display:flex;justify-content:space-between;align-items:center;background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
 .logo{height:42px;background:white;padding:6px;border-radius:12px}
-
 .container{max-width:1200px;margin:auto;padding:16px}
-
-.card{
-background:var(--card);
-padding:16px;
-border-radius:18px;
-margin:14px 0;
-box-shadow:0 8px 22px rgba(0,0,0,.12)
-}
-
+.card{background:var(--card);padding:16px;border-radius:18px;margin:14px 0;box-shadow:0 8px 22px rgba(0,0,0,.12)}
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
 
 .day{
@@ -52,20 +38,13 @@ padding:8px;
 text-align:center;
 cursor:pointer;
 font-weight:700;
-position:relative
 }
 
 .day.weekend{background:var(--weekend)}
 .day.today{outline:3px solid #22c55e}
 .day.active{outline:3px solid var(--main)}
 
-.dot{
-width:7px;height:7px;
-background:var(--main);
-border-radius:50%;
-margin:4px auto 0;
-}
-
+.dot{width:7px;height:7px;background:var(--main);border-radius:50%;margin:4px auto 0}
 .day small{opacity:.6;font-size:12px}
 
 button,input,select{
@@ -75,14 +54,17 @@ padding:8px;border-radius:10px;border:1px solid #ccc;margin:4px;width:100%
 button{background:var(--main);color:white;font-weight:700;border:none}
 
 .row{
-display:flex;justify-content:space-between;
-border-bottom:1px solid var(--soft);padding:6px 0
+display:flex;
+justify-content:space-between;
+border-bottom:1px solid var(--soft);
+padding:6px 0;
+gap:6px;
+align-items:center
 }
 
 .small{width:90px}
 .remove{color:var(--danger);font-weight:800;cursor:pointer}
 .low{color:var(--danger);font-weight:800}
-
 canvas{width:100%;height:180px}
 </style>
 </head>
@@ -100,7 +82,7 @@ canvas{width:100%;height:180px}
 <div class="container">
 
 <div class="card">
-<b>Statystyki</b>
+<b>Statystyki globalne</b>
 <div>Dziś: <span id="todayStat">0</span> zł</div>
 <div>Tydzień: <span id="weekStat">0</span> zł</div>
 <div>Miesiąc: <span id="monthStat">0</span> zł</div>
@@ -119,7 +101,7 @@ canvas{width:100%;height:180px}
 <div class="card">
 <h3>👷 Pracownicy</h3>
 <input id="wName" placeholder="Imię">
-<input id="wRate" type="number" placeholder="Stawka">
+<input id="wRate" type="number" placeholder="Stawka/h">
 <button onclick="addWorker()">Dodaj</button>
 <div id="workers"></div>
 </div>
@@ -149,8 +131,13 @@ canvas{width:100%;height:180px}
 <h3>💰 Zaliczki</h3>
 <select id="advWorker"></select>
 <input id="advAmount" type="number" placeholder="Kwota">
-<button onclick="addAdvance()">Dodaj</button>
+<button onclick="addAdvance()">Dodaj zaliczkę</button>
 <div id="advances"></div>
+</div>
+
+<div class="card">
+<h3>📊 Rozliczenia pracowników</h3>
+<div id="payouts"></div>
 </div>
 
 <div class="card">
@@ -171,7 +158,7 @@ canvas{width:100%;height:180px}
 </div>
 
 <div class="card">
-<h3>📊 Wykres</h3>
+<h3>📈 Wykres zarobków dni</h3>
 <canvas id="chart"></canvas>
 </div>
 
@@ -188,7 +175,6 @@ const rate=id=>db.workers.find(w=>w.id===id)?.rate||0;
 
 let cur=new Date(),selected=null;
 const key=d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`;
-
 const dayNames=["Nd","Pn","Wt","Śr","Cz","Pt","Sb"];
 
 function moveMonth(n){cur.setMonth(cur.getMonth()+n);render();}
@@ -251,11 +237,12 @@ costAmount.value="";save();render();
 
 function render(){
 buildCalendar();
-workers.innerHTML=projects.innerHTML=entries.innerHTML=materials.innerHTML=costs.innerHTML=advances.innerHTML="";
+workers.innerHTML=projects.innerHTML=entries.innerHTML=materials.innerHTML=costs.innerHTML=advances.innerHTML=payouts.innerHTML="";
 entryWorker.innerHTML=entryProject.innerHTML=costProject.innerHTML=advWorker.innerHTML="";
 
 db.workers.forEach(w=>{
-workers.innerHTML+=`<div class="row">
+workers.innerHTML+=`
+<div class="row">
 <input value="${w.name}" oninput="w.name=this.value;save()">
 <input class="small" value="${w.rate}" oninput="w.rate=+this.value;save()">
 <span class="remove" onclick="db.workers=db.workers.filter(x=>x.id!='${w.id}');save();render()">✖</span>
@@ -265,7 +252,8 @@ advWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
 });
 
 db.projects.forEach(p=>{
-projects.innerHTML+=`<div class="row">
+projects.innerHTML+=`
+<div class="row">
 <input value="${p.name}" oninput="p.name=this.value;save()">
 <span class="remove" onclick="db.projects=db.projects.filter(x=>x.id!='${p.id}');save();render()">✖</span>
 </div>`;
@@ -275,7 +263,9 @@ costProject.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
 
 db.entries.filter(e=>e.date===selected).forEach(e=>{
 let w=db.workers.find(x=>x.id===e.worker);
-entries.innerHTML+=`<div class="row">${w?.name}
+entries.innerHTML+=`
+<div class="row">
+${w?.name}
 <input class="small" value="${e.hours}" oninput="e.hours=+this.value;save();render()">
 <span class="remove" onclick="db.entries=db.entries.filter(x=>x.id!='${e.id}');save();render()">✖</span>
 </div>`;
@@ -283,14 +273,17 @@ entries.innerHTML+=`<div class="row">${w?.name}
 
 db.advances.forEach(a=>{
 let w=db.workers.find(x=>x.id===a.worker);
-advances.innerHTML+=`<div class="row">${w?.name} ${a.date}
+advances.innerHTML+=`
+<div class="row">
+${w?.name} ${a.date}
 <input class="small" value="${a.amount}" oninput="a.amount=+this.value;save();render()">
 <span class="remove" onclick="db.advances=db.advances.filter(x=>x.id!='${a.id}');save();render()">✖</span>
 </div>`;
 });
 
 db.materials.forEach(m=>{
-materials.innerHTML+=`<div class="row ${m.qty<5?'low':''}">
+materials.innerHTML+=`
+<div class="row ${m.qty<5?'low':''}">
 ${m.name}
 <input class="small" value="${m.qty}" oninput="m.qty=+this.value;save();render()">
 </div>`;
@@ -299,6 +292,25 @@ ${m.name}
 db.costs.forEach(c=>{
 let p=db.projects.find(x=>x.id===c.project);
 costs.innerHTML+=`<div class="row">${p?.name}: ${c.amount} zł</div>`;
+});
+
+/* ROZLICZENIA PRACOWNIKÓW */
+db.workers.forEach(w=>{
+let earned=db.entries.filter(e=>e.worker===w.id)
+.reduce((s,e)=>s+e.hours*w.rate,0);
+
+let advances=db.advances.filter(a=>a.worker===w.id)
+.reduce((s,a)=>s+a.amount,0);
+
+let toPay=earned-advances;
+
+payouts.innerHTML+=`
+<div class="row">
+<b>${w.name}</b>
+<span>Zarobił: ${earned.toFixed(0)} zł</span>
+<span>Zaliczki: ${advances.toFixed(0)} zł</span>
+<span><b>Do wypłaty: ${toPay.toFixed(0)} zł</b></span>
+</div>`;
 });
 
 calculateStats();
@@ -318,7 +330,9 @@ if(new Date(e.date)>=weekStart) w+=cost;
 if(e.date.startsWith(monthStr)) m+=cost;
 });
 
-let advancesMonth=db.advances.filter(a=>a.date.startsWith(monthStr)).reduce((s,a)=>s+a.amount,0);
+let advancesMonth=db.advances.filter(a=>a.date.startsWith(monthStr))
+.reduce((s,a)=>s+a.amount,0);
+
 let costs=db.costs.reduce((s,c)=>s+c.amount,0);
 
 todayStat.textContent=t;
@@ -335,6 +349,7 @@ db.entries.forEach(e=>map[e.date]=(map[e.date]||0)+e.hours*rate(e.worker));
 let vals=Object.values(map);
 let max=Math.max(...vals,10);
 let w=300/(vals.length||1);
+
 vals.forEach((v,i)=>{
 let h=(v/max)*150;
 ctx.fillStyle="#5fa38c";
