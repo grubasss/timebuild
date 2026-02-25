@@ -18,20 +18,36 @@ background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
 .container{max-width:1200px;margin:auto;padding:16px}
 .card{background:var(--card);padding:16px;border-radius:18px;margin:14px 0;
 box-shadow:0 8px 22px rgba(0,0,0,.12)}
+
 .grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.day{background:var(--soft);border-radius:14px;padding:8px;text-align:center;
-font-weight:700;cursor:pointer}
+.weekdays{display:grid;grid-template-columns:repeat(7,1fr);font-weight:700;text-align:center;margin-bottom:6px}
+
+.day{
+background:var(--soft);
+border-radius:14px;
+padding:8px;
+text-align:center;
+font-weight:700;
+cursor:pointer
+}
+.day.weekend{background:var(--weekend)}
 .day.today{outline:3px solid #22c55e}
 .day.active{outline:3px solid var(--main)}
-.dot{width:7px;height:7px;background:var(--main);
-border-radius:50%;margin:4px auto 0}
+
+.dot{
+width:7px;
+height:7px;
+background:var(--main);
+border-radius:50%;
+margin:4px auto 0
+}
+
 button,input,select,textarea{
-padding:8px;border-radius:10px;border:1px solid #ccc;margin:4px;width:100%}
+padding:8px;border-radius:10px;border:1px solid #ccc;margin:4px;width:100%
+}
 button{background:var(--main);color:white;font-weight:700;border:none}
-.row{display:flex;justify-content:space-between;
-align-items:center;border-bottom:1px solid var(--soft);padding:6px 0}
+.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--soft);padding:6px 0}
 .small{width:90px}
-.remove{color:var(--danger);font-weight:800;cursor:pointer}
 canvas{max-width:100%}
 </style>
 </head>
@@ -41,7 +57,7 @@ canvas{max-width:100%}
 <header>
 <img src="logo.png" class="logo">
 <b>House Concept ERP COMPLETE+ PRO</b>
-<button onclick="toggleDark()">🌙</button>
+<button onclick="document.body.classList.toggle('dark')">🌙</button>
 </header>
 
 <div class="container">
@@ -59,12 +75,12 @@ canvas{max-width:100%}
 <b id="monthLabel"></b>
 <button onclick="moveMonth(1)">▶</button>
 </div>
-<div id="calendar" class="grid"></div>
+
+<div class="weekdays">
+<div>Pn</div><div>Wt</div><div>Śr</div><div>Cz</div><div>Pt</div><div>Sb</div><div>Nd</div>
 </div>
 
-<div class="card">
-<h3>🔍 Wyszukaj pracownika</h3>
-<input id="searchWorker" oninput="render()" placeholder="Imię">
+<div id="calendar" class="grid"></div>
 </div>
 
 <div class="card">
@@ -87,7 +103,7 @@ canvas{max-width:100%}
 <select id="entryWorker"></select>
 <select id="entryProject"></select>
 <input id="entryHours" type="number">
-<button onclick="addEntry()">Dodaj</button>
+<button onclick="addEntry()">Dodaj na dzień</button>
 <div id="entries"></div>
 </div>
 
@@ -95,7 +111,7 @@ canvas{max-width:100%}
 <h3>💰 Zaliczki</h3>
 <select id="advWorker"></select>
 <input id="advAmount" type="number">
-<button onclick="addAdvance()">Dodaj</button>
+<button onclick="addAdvance()">Dodaj dziś</button>
 <div id="advances"></div>
 </div>
 
@@ -129,8 +145,6 @@ canvas{max-width:100%}
 </div>
 
 <script>
-function toggleDark(){document.body.classList.toggle("dark")}
-
 let db=JSON.parse(localStorage.getItem("ERP_PRO"))||{
 workers:[
 {id:"1",name:"Łukasz",rate:25},
@@ -161,29 +175,53 @@ notes:[]
 
 function save(){localStorage.setItem("ERP_PRO",JSON.stringify(db))}
 
+let cur=new Date(),selected=null;
+
+function moveMonth(n){cur.setMonth(cur.getMonth()+n);render()}
+
+function buildCalendar(){
+calendar.innerHTML="";
+monthLabel.textContent=cur.toLocaleDateString("pl",{month:"long",year:"numeric"});
+
+let days=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();
+
+for(let i=1;i<=days;i++){
+let d=new Date(cur.getFullYear(),cur.getMonth(),i);
+let k=d.toISOString().slice(0,10);
+let weekend=d.getDay()===0||d.getDay()===6;
+
+calendar.innerHTML+=`
+<div class="day ${weekend?'weekend':''} ${k===selected?'active':''}"
+onclick="selected='${k}';render()">
+${i}
+${db.entries.some(e=>e.date===k)?'<div class="dot"></div>':''}
+</div>`;
+}
+}
+
 function addWorker(){
-db.workers.push({id:crypto.randomUUID(),name:wName.value,rate:+wRate.value})
-wName.value=wRate.value=""
-save();render()
+db.workers.push({id:crypto.randomUUID(),name:wName.value,rate:+wRate.value});
+wName.value=wRate.value="";
+save();render();
 }
 
 function addProject(){
-db.projects.push({id:crypto.randomUUID(),name:pName.value})
-pName.value=""
-save();render()
+db.projects.push({id:crypto.randomUUID(),name:pName.value});
+pName.value="";
+save();render();
 }
 
 function addEntry(){
-if(!selected)return
+if(!selected)return;
 db.entries.push({
 id:crypto.randomUUID(),
 date:selected,
 worker:entryWorker.value,
 project:entryProject.value,
 hours:+entryHours.value
-})
-entryHours.value=""
-save();render()
+});
+entryHours.value="";
+save();render();
 }
 
 function addAdvance(){
@@ -192,9 +230,9 @@ id:crypto.randomUUID(),
 worker:advWorker.value,
 date:new Date().toISOString().slice(0,10),
 amount:+advAmount.value
-})
-advAmount.value=""
-save();render()
+});
+advAmount.value="";
+save();render();
 }
 
 function addMaterial(){
@@ -203,124 +241,89 @@ id:crypto.randomUUID(),
 name:mName.value,
 qty:+mQty.value,
 price:+mPrice.value
-})
-mName.value=mQty.value=mPrice.value=""
-save();render()
+});
+mName.value=mQty.value=mPrice.value="";
+save();render();
 }
 
 function addNote(){
-db.notes.push(note.value)
-note.value=""
-save();render()
+db.notes.push(note.value);
+note.value="";
+save();render();
 }
 
 function manualBackup(){
-const w=window.open()
-w.document.write("<pre>"+JSON.stringify(db,null,2)+"</pre>")
+const w=window.open();
+w.document.write("<pre>"+JSON.stringify(db,null,2)+"</pre>");
 }
 
 function restore(input){
-const r=new FileReader()
-r.onload=e=>{db=JSON.parse(e.target.result);save();render()}
-r.readAsText(input.files[0])
-}
-
-let cur=new Date(),selected=null
-function moveMonth(n){cur.setMonth(cur.getMonth()+n);render()}
-
-function buildCalendar(){
-calendar.innerHTML=""
-monthLabel.textContent=cur.toLocaleDateString("pl",{month:"long",year:"numeric"})
-let days=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate()
-for(let i=1;i<=days;i++){
-let d=new Date(cur.getFullYear(),cur.getMonth(),i)
-let k=d.toISOString().slice(0,10)
-calendar.innerHTML+=`
-<div class="day ${k===selected?'active':''}"
-onclick="selected='${k}';render()">
-${i}
-${db.entries.some(e=>e.date===k)?'<div class="dot"></div>':''}
-</div>`
-}
+const r=new FileReader();
+r.onload=e=>{db=JSON.parse(e.target.result);save();render()};
+r.readAsText(input.files[0]);
 }
 
 function render(){
-buildCalendar()
+buildCalendar();
 
-let earned=0,adv=0
+workers.innerHTML=projects.innerHTML=entries.innerHTML=advances.innerHTML=materials.innerHTML=notes.innerHTML="";
+entryWorker.innerHTML=entryProject.innerHTML=advWorker.innerHTML="";
 
-workers.innerHTML=""
-projects.innerHTML=""
-entries.innerHTML=""
-advances.innerHTML=""
-materials.innerHTML=""
-notes.innerHTML=""
-entryWorker.innerHTML=""
-entryProject.innerHTML=""
-advWorker.innerHTML=""
-
-let search=searchWorker.value?.toLowerCase()||""
+let earned=0,adv=0;
 
 db.workers.forEach(w=>{
-if(search && !w.name.toLowerCase().includes(search)) return
-
 workers.innerHTML+=`
 <div class="row">
 <input value="${w.name}" oninput="w.name=this.value;save()">
 <input class="small" value="${w.rate}" oninput="w.rate=+this.value;save()">
-</div>`
-
-entryWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`
-advWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`
-})
+</div>`;
+entryWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+advWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+});
 
 db.projects.forEach(p=>{
 projects.innerHTML+=`
 <div class="row">
 <input value="${p.name}" oninput="p.name=this.value;save()">
-</div>`
-entryProject.innerHTML+=`<option value="${p.id}">${p.name}</option>`
-})
+</div>`;
+entryProject.innerHTML+=`<option value="${p.id}">${p.name}</option>`;
+});
 
 db.entries.forEach(e=>{
-let w=db.workers.find(x=>x.id===e.worker)
-earned+=e.hours*w.rate
-if(e.date===selected)
-entries.innerHTML+=`${w.name}: ${e.hours}h<br>`
-})
+let w=db.workers.find(x=>x.id===e.worker);
+earned+=e.hours*w.rate;
+if(e.date===selected) entries.innerHTML+=`${w.name}: ${e.hours}h<br>`;
+});
 
 db.advances.forEach(a=>{
-adv+=a.amount
-advances.innerHTML+=`${db.workers.find(w=>w.id===a.worker)?.name}: ${a.amount} zł<br>`
-})
+adv+=a.amount;
+advances.innerHTML+=`${db.workers.find(w=>w.id===a.worker)?.name}: ${a.amount} zł<br>`;
+});
 
 db.materials.forEach(m=>{
-materials.innerHTML+=`${m.name}: ${m.qty*m.price} zł<br>`
-})
+materials.innerHTML+=`${m.name}: ${m.qty*m.price} zł<br>`;
+});
 
-db.notes.forEach(n=>notes.innerHTML+=n+"<br>")
+db.notes.forEach(n=>notes.innerHTML+=n+"<br>");
 
-earnedStat.textContent=earned.toFixed(2)
-advanceStat.textContent=adv.toFixed(2)
-toPayStat.textContent=(earned-adv).toFixed(2)
+earnedStat.textContent=earned.toFixed(2);
+advanceStat.textContent=adv.toFixed(2);
+toPayStat.textContent=(earned-adv).toFixed(2);
 
-drawChart()
+drawChart();
 }
 
 function drawChart(){
-let ctx=document.getElementById("hoursChart")
-if(!ctx) return
-let hours=db.entries.reduce((s,e)=>s+e.hours,0)
-ctx.height=100
-let c=ctx.getContext("2d")
-c.clearRect(0,0,ctx.width,ctx.height)
-c.fillStyle="#5fa38c"
-c.fillRect(10,10,hours*2,30)
-c.fillStyle="#000"
-c.fillText("Godziny: "+hours,10,60)
+let c=hoursChart.getContext("2d");
+let hours=db.entries.reduce((s,e)=>s+e.hours,0);
+c.clearRect(0,0,300,100);
+c.fillStyle="#5fa38c";
+c.fillRect(10,20,hours*2,30);
+c.fillStyle="#000";
+c.fillText("Godziny: "+hours,10,70);
 }
 
-render()
+render();
 </script>
 </body>
 </html>
