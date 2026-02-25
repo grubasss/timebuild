@@ -33,6 +33,24 @@ button{background:var(--main);color:white;font-weight:700;border:none}
 </style>
 </head>
 
+<button onclick="exportData()" style="position:fixed;bottom:20px;right:20px;z-index:9999;padding:12px;">
+⬇️ Eksport danych
+</button>
+
+<script>
+function exportData(){
+  const data = JSON.stringify(localStorage, null, 2);
+  const blob = new Blob([data], {type:'application/json'});
+  const url = URL.createObjectURL(blob);
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'backup.json';
+  a.click();
+
+  URL.revokeObjectURL(url);
+}
+</script>       
 <body>
 
 <div id="lock">
