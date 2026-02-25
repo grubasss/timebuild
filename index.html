@@ -2,142 +2,258 @@
 <html lang="pl">
 <head>
 <meta charset="UTF-8">
-<title>House Concept ERP PRO</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>House Concept ERP COMPLETE+ PRO</title>
+
 <style>
-body{font-family:Arial;margin:0;background:#f4f4f4}
-nav{display:flex;background:#222;color:#fff}
-nav button{flex:1;padding:12px;border:0;background:#222;color:#fff;cursor:pointer}
-nav button:hover{background:#444}
-section{display:none;padding:15px}
-input,select,button{padding:6px;margin:4px}
-table{border-collapse:collapse;width:100%;background:#fff}
-td,th{border:1px solid #ccc;padding:6px;text-align:center}
-.active{display:block}
+:root{
+--main:#5fa38c;--bg:#f3f7f6;--card:#fff;--soft:#eaf5f1;
+--text:#1f2933;--danger:#dc2626;--weekend:#fde2e2;
+}
+.dark{--bg:#0f172a;--card:#1e293b;--soft:#24324a;--text:#e5e7eb;--weekend:#3a1f2b}
+body{margin:0;font-family:system-ui;background:var(--bg);color:var(--text)}
+header{display:flex;justify-content:space-between;align-items:center;
+background:linear-gradient(135deg,#0f172a,#1e293b);color:white;padding:14px}
+.container{max-width:1200px;margin:auto;padding:16px}
+.card{background:var(--card);padding:16px;border-radius:18px;margin:14px 0;box-shadow:0 8px 22px rgba(0,0,0,.12)}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
+.day{background:var(--soft);border-radius:14px;padding:8px;text-align:center;font-weight:700;cursor:pointer}
+.day.weekend{background:var(--weekend)}
+.day.today{outline:3px solid #22c55e}
+.day.active{outline:3px solid var(--main)}
+.dot{width:7px;height:7px;background:var(--main);border-radius:50%;margin:4px auto 0}
+button,input,select{padding:8px;border-radius:10px;border:1px solid #ccc;margin:4px;width:100%}
+button{background:var(--main);color:white;font-weight:700;border:none}
+.row{display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--soft);padding:6px 0}
+.small{width:90px}
+.remove{color:var(--danger);font-weight:800;cursor:pointer}
 </style>
 </head>
+
 <body>
 
-<nav>
-<button onclick="show('emp')">Pracownicy</button>
-<button onclick="show('hours')">Godziny</button>
-<button onclick="show('adv')">Zaliczki</button>
-<button onclick="show('settle')">Rozliczenia</button>
-<button onclick="show('mat')">Materiały</button>
-<button onclick="show('notes')">Notatnik</button>
-<button onclick="show('backup')">Backup</button>
-</nav>
+<header>
+<b>House Concept ERP COMPLETE+ PRO</b>
+<button onclick="document.body.classList.toggle('dark')">🌙</button>
+</header>
 
-<section id="emp" class="active">
-<h2>Pracownicy</h2>
-<input id="ename" placeholder="Imię">
-<input id="erate" type="number" placeholder="Stawka">
-<button onclick="addEmp()">Dodaj</button>
-<div id="emplist"></div>
-</section>
+<div class="container">
 
-<section id="hours">
-<h2>Godziny</h2>
-<input type="date" id="hdate">
-<input type="number" id="hval" placeholder="Godziny">
-<select id="hemp"></select>
-<button onclick="addHours()">Dodaj</button>
-<div id="hourslist"></div>
-</section>
+<div class="card">
+<b>Statystyki</b><br>
+Zarobione: <span id="earned">0</span> zł<br>
+Zaliczki: <span id="advSum">0</span> zł<br>
+<b>Do wypłaty: <span id="toPay">0</span> zł</b>
+</div>
 
-<section id="adv">
-<h2>Zaliczki</h2>
-<input type="date" id="adate">
-<input type="number" id="aval" placeholder="Kwota">
-<select id="aemp"></select>
-<button onclick="addAdv()">Dodaj</button>
-<div id="advlist"></div>
-</section>
+<div class="card">
+<div style="display:flex;justify-content:space-between">
+<button onclick="moveMonth(-1)">◀</button>
+<b id="monthLabel"></b>
+<button onclick="moveMonth(1)">▶</button>
+</div>
+<div id="calendar" class="grid"></div>
+</div>
 
-<section id="settle">
-<h2>Rozliczenia miesięczne</h2>
-<input type="month" id="monthpick" onchange="calcSettle()">
-<div id="settleview"></div>
-</section>
+<div class="card">
+<h3>👷 Pracownicy</h3>
+<input id="wName" placeholder="Imię">
+<input id="wRate" type="number" placeholder="Stawka">
+<button onclick="addWorker()">Dodaj</button>
+<div id="workers"></div>
+</div>
 
-<section id="mat">
-<h2>Materiały</h2>
-<input id="mname" placeholder="Materiał">
-<input id="mqty" type="number" placeholder="Ilość">
-<input id="mprice" type="number" placeholder="Cena">
-<button onclick="addMat()">Dodaj</button>
-<div id="matlist"></div>
-</section>
+<div class="card">
+<h3>⏱ Godziny</h3>
+<select id="entryWorker"></select>
+<input id="entryHours" type="number" placeholder="Godziny">
+<button onclick="addEntry()">Dodaj na wybrany dzień</button>
+</div>
 
-<section id="notes">
-<h2>Notatnik</h2>
-<textarea id="note" rows="3" style="width:100%"></textarea>
+<div class="card">
+<h3>💰 Zaliczki</h3>
+<select id="advWorker"></select>
+<input id="advAmount" type="number" placeholder="Kwota">
+<button onclick="addAdvance()">Dodaj dziś</button>
+<div id="advances"></div>
+</div>
+
+<div class="card">
+<h3>📆 Rozliczenia tygodniowe</h3>
+<div id="weekly"></div>
+</div>
+
+<div class="card">
+<h3>📅 Rozliczenia miesięczne</h3>
+<input type="month" id="monthPick" onchange="render()">
+<div id="monthly"></div>
+</div>
+
+<div class="card">
+<h3>📦 Materiały</h3>
+<input id="mName" placeholder="Materiał">
+<input id="mQty" type="number" placeholder="Ilość">
+<input id="mPrice" type="number" placeholder="Cena">
+<button onclick="addMaterial()">Dodaj</button>
+<div id="materials"></div>
+</div>
+
+<div class="card">
+<h3>📝 Notatnik</h3>
+<textarea id="note"></textarea>
 <button onclick="addNote()">Zapisz</button>
-<div id="notelist"></div>
-</section>
+<div id="notes"></div>
+</div>
 
-<section id="backup">
-<h2>Backup</h2>
-<button onclick="exportData()">Eksport danych</button>
+<div class="card">
+<h3>💾 Backup</h3>
+<button onclick="exportData()">Eksport</button>
 <input type="file" onchange="importData(event)">
-</section>
+</div>
+
+</div>
 
 <script>
-let db = JSON.parse(localStorage.erp||'{"emp":[],"hours":[],"adv":[],"mat":[],"notes":[]}');
+let db=JSON.parse(localStorage.ERP_PRO||'{"workers":[],"entries":[],"advances":[],"materials":[],"notes":[]}');
+const save=()=>localStorage.ERP_PRO=JSON.stringify(db);
+const uid=()=>crypto.randomUUID();
+let cur=new Date(),selected=null;
 
-function save(){localStorage.erp=JSON.stringify(db)}
+const key=d=>d.toISOString().slice(0,10);
 
-function show(id){
- document.querySelectorAll("section").forEach(s=>s.classList.remove("active"));
- document.getElementById(id).classList.add("active");
+function weekKey(d){
+ d=new Date(d);
+ let day=d.getDay()||7;
+ d.setDate(d.getDate()-day+1);
+ return key(d);
 }
 
-function refresh(){
- let e = db.emp.map((x,i)=>`${x.name} (${x.rate} zł)`).join("<br>");
- document.getElementById("emplist").innerHTML=e;
+function moveMonth(n){cur.setMonth(cur.getMonth()+n);render()}
 
- let opts=db.emp.map((x,i)=>`<option value="${i}">${x.name}</option>`).join("");
- hemp.innerHTML=opts; aemp.innerHTML=opts;
-
- hourslist.innerHTML=db.hours.map(h=>`${h.date} ${db.emp[h.emp].name} ${h.val}h`).join("<br>");
- advlist.innerHTML=db.adv.map(a=>`${a.date} ${db.emp[a.emp].name} ${a.val} zł`).join("<br>");
- matlist.innerHTML=db.mat.map(m=>`${m.name} ${m.qty} x ${m.price} = ${m.qty*m.price} zł`).join("<br>");
- notelist.innerHTML=db.notes.join("<br>");
- save();
+function buildCalendar(){
+calendar.innerHTML="";
+monthLabel.textContent=cur.toLocaleDateString("pl",{month:"long",year:"numeric"});
+let days=new Date(cur.getFullYear(),cur.getMonth()+1,0).getDate();
+for(let i=1;i<=days;i++){
+let d=new Date(cur.getFullYear(),cur.getMonth(),i);
+let k=key(d);
+calendar.innerHTML+=`
+<div class="day ${k===selected?'active':''}" onclick="selected='${k}';render()">
+${i}
+${db.entries.some(e=>e.date===k)?'<div class="dot"></div>':''}
+</div>`;
+}
 }
 
-function addEmp(){db.emp.push({name:ename.value,rate:+erate.value});refresh()}
-function addHours(){db.hours.push({date:hdate.value,val:+hval.value,emp:+hemp.value});refresh()}
-function addAdv(){db.adv.push({date:adate.value,val:+aval.value,emp:+aemp.value});refresh()}
-function addMat(){db.mat.push({name:mname.value,qty:+mqty.value,price:+mprice.value});refresh()}
-function addNote(){db.notes.push(note.value);note.value="";refresh()}
+function addWorker(){
+db.workers.push({id:uid(),name:wName.value,rate:+wRate.value});
+wName.value=wRate.value="";
+save();render();
+}
 
-function calcSettle(){
- let m=monthpick.value;
- let out="";
- db.emp.forEach((e,i)=>{
-  let h=db.hours.filter(x=>x.emp==i&&x.date.startsWith(m))
-   .reduce((s,x)=>s+x.val,0);
-  let pay=h*e.rate;
-  let adv=db.adv.filter(x=>x.emp==i&&x.date.startsWith(m))
-   .reduce((s,x)=>s+x.val,0);
-  out+=`${e.name}: godz ${h} | zarobek ${pay} | zaliczki ${adv} | do wypłaty ${pay-adv} zł<br>`;
- })
- settleview.innerHTML=out;
+function addEntry(){
+if(!selected)return;
+db.entries.push({id:uid(),date:selected,worker:entryWorker.value,hours:+entryHours.value});
+entryHours.value="";
+save();render();
+}
+
+function addAdvance(){
+db.advances.push({id:uid(),worker:advWorker.value,date:key(new Date()),amount:+advAmount.value});
+advAmount.value="";
+save();render();
+}
+
+function addMaterial(){
+db.materials.push({id:uid(),name:mName.value,qty:+mQty.value,price:+mPrice.value});
+mName.value=mQty.value=mPrice.value="";
+save();render();
+}
+
+function addNote(){
+db.notes.push(note.value);
+note.value="";
+save();render();
 }
 
 function exportData(){
- const data=JSON.stringify(db,null,2);
- const w=window.open();
- w.document.write("<pre>"+data+"</pre>");
+const w=window.open();
+w.document.write("<pre>"+JSON.stringify(db,null,2)+"</pre>");
 }
 
 function importData(e){
- const r=new FileReader();
- r.onload=()=>{db=JSON.parse(r.result);refresh()}
- r.readAsText(e.target.files[0]);
+const r=new FileReader();
+r.onload=()=>{db=JSON.parse(r.result);save();render()}
+r.readAsText(e.target.files[0]);
 }
 
-refresh();
+function render(){
+buildCalendar();
+workers.innerHTML=entryWorker.innerHTML=advWorker.innerHTML="";
+advances.innerHTML=weekly.innerHTML=monthly.innerHTML=materials.innerHTML=notes.innerHTML="";
+
+db.workers.forEach(w=>{
+workers.innerHTML+=`
+<div class="row">
+<input value="${w.name}" oninput="w.name=this.value;save()">
+<input class="small" value="${w.rate}" oninput="w.rate=+this.value;save()">
+</div>`;
+entryWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+advWorker.innerHTML+=`<option value="${w.id}">${w.name}</option>`;
+});
+
+db.advances.forEach(a=>{
+advances.innerHTML+=`<div class="row">${db.workers.find(w=>w.id===a.worker)?.name}: ${a.amount} zł</div>`;
+});
+
+let earned=0,adv=0;
+let weeks={};
+
+db.entries.forEach(e=>{
+let w=db.workers.find(x=>x.id===e.worker);
+earned+=e.hours*w.rate;
+let k=weekKey(e.date);
+weeks[k]=weeks[k]||{};
+weeks[k][e.worker]=(weeks[k][e.worker]||0)+e.hours*w.rate;
+});
+
+db.advances.forEach(a=>{
+adv+=a.amount;
+let k=weekKey(a.date);
+weeks[k]=weeks[k]||{};
+weeks[k][a.worker]=(weeks[k][a.worker]||0)-a.amount;
+});
+
+for(let k in weeks){
+weekly.innerHTML+=`<b>Tydzień ${k}</b><br>`;
+for(let id in weeks[k]){
+let w=db.workers.find(x=>x.id===id);
+weekly.innerHTML+=`${w.name}: ${weeks[k][id]} zł<br>`;
+}
+weekly.innerHTML+="<hr>";
+}
+
+let m=monthPick.value;
+if(m){
+db.workers.forEach(w=>{
+let earn=db.entries.filter(e=>e.worker===w.id&&e.date.startsWith(m))
+.reduce((s,e)=>s+e.hours*w.rate,0);
+let ad=db.advances.filter(a=>a.worker===w.id&&a.date.startsWith(m))
+.reduce((s,a)=>s+a.amount,0);
+monthly.innerHTML+=`${w.name}: ${earn-ad} zł<br>`;
+});
+}
+
+db.materials.forEach(m=>materials.innerHTML+=`${m.name}: ${m.qty*m.price} zł<br>`);
+db.notes.forEach(n=>notes.innerHTML+=n+"<br>");
+
+earnedStat?.textContent;
+earned.textContent=earned;
+advSum.textContent=adv;
+toPay.textContent=earned-adv;
+}
+
+render();
 </script>
 </body>
 </html>
